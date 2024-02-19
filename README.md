@@ -2,7 +2,7 @@
 
 Text editor in progress.
 
-Expecting features : 
+Expecting features
 * simultaneous text editing (by multiple users)
 * gpu rendering
 * easy customization
