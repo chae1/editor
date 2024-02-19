@@ -1,0 +1,19 @@
+#include "engine.h"
+
+#include <vulkan/vulkan.h>
+#include <iostream>
+#include <fmt/core.h>
+
+using namespace engine;
+
+void Engine::init_vulkan() {
+
+}
+
+void Engine::main_loop() {
+
+}
+
+void Engine::clean_up() {
+
+}

@@ -1,0 +1,9 @@
+#include "engine.h"
+#include <iostream>
+
+using namespace engine;
+
+int main() {
+    Engine engine;
+    engine.run();
+}

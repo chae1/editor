@@ -1,0 +1,77 @@
+#include "glfw/glfw_window.hpp"
+#include "socket/socket_client.h"
+#include <exception>
+#include <stdexcept>
+#include <iostream>
+#include <string>
+#include <memory>
+
+using namespace glfw_window;
+using namespace socket_client;
+
+// std::unique_ptr<Socket_client> pclient;
+
+class Text_client {
+public:
+    Text_client(std::string ip_port) : glfw_window{ 500, 400, "editor" }, client{ ip_port } {}
+    Glfw_window glfw_window;
+    Socket_client client;
+
+private:
+};
+
+Text_client* pclient;
+
+// Glfw_window* pwindow;
+// Socket_client* pclient;
+
+constexpr const char* login_msg_begin = "0\n";
+constexpr const char* key_event_msg_begin = "1\n";
+
+inline void send_login_msg(const char* username) {
+    pclient->client.write_msg(login_msg_begin);
+    pclient->client.write_msg(username);
+    pclient->client.write_msg("\n");
+}
+
+inline void send_key_input_msg(int key, int action) {
+    std::cout << "key " << key << ", action " << action << "\n";
+    pclient->client.write_msg(key_event_msg_begin);
+    pclient->client.write_msg(std::to_string(key).c_str());
+    pclient->client.write_msg("\n");
+    pclient->client.write_msg(std::to_string(action).c_str());
+    pclient->client.write_msg("\n");
+}
+
+void key_callback(GLFWwindow* glfw_window, int key, int scancode, int action, int mods) {
+    if (action == GLFW_PRESS || action == GLFW_RELEASE) {
+        std::cout << "key " << key << ", action " << action << "\n";
+	send_key_input_msg(key, action);
+    }
+}
+
+int main(int argc, char* argv[]) {
+    try {
+	if (argc != 2) {
+            throw std::runtime_error("error : argc != 2");
+        }
+
+	std::string ip_port = argv[1];
+        char* username = argv[2];
+
+	pclient = new Socket_client{ ip_port };
+	send_login_msg(username);
+	
+	pwindow = new Glfw_window{ 500, 400, "editor" };
+	pwindow->set_key_callback(key_callback);
+        pwindow->run_callback_loop();
+	// 메롱ㅎㅎ
+    }
+
+    catch (const std::exception& e){
+	std::cerr << e.what() << std::endl;
+        return -1;
+    }
+
+    return 0;
+}

@@ -1,0 +1,10 @@
+font
+UbuntuMono-R
+
+ttf-path
+/home/chaewon/Desktop/chae1/editor/client/src/font/ttf/UbuntuMono-R.ttf
+
+line-height
+890.00
+
+font-info-end

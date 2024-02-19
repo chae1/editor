@@ -1,0 +1,12 @@
+#include "font.h"
+
+using namespace font;
+
+int main() {
+    FontInfo font_info("/home/chaewon/Desktop/chae1/editor/client/src/font/UbuntuMono-R/");
+    font_info.generate_buffers();
+    // font_info.print_buffers();
+    font_info.delete_buffers();
+    
+    return 0;
+}

@@ -1,0 +1,12 @@
+#include <iostream>
+#include <funcional>
+
+class A {
+    void func(int i1, int i2) {
+        std::cout << i1 << i2 << "\n";
+    }
+};
+
+int main() {
+  
+}

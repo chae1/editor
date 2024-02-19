@@ -1,0 +1,295 @@
+(defpackage my-list
+  (:use :common-lisp :my-utils :defobj))
+
+(in-package :my-list)
+
+(defobj list-node!
+  (data nil)
+  (prev-node nil :type (or list-node! null))
+  (next-node nil :type (or list-node! null)))
+
+(defmethod print-object ((node list-node!) out)
+  (print-unreadable-object (node out :type t)
+    (format out "(data = ~s)" (list-node!-data node))))
+
+(export 'cursor!)
+(export 'curr-index)
+(defobj cursor!
+  (curr-index nil :type (or integer null))
+  (curr-node nil :type (or list-node! null)))
+
+(declaim (inline cursor!-<=))
+(defobjfun cursor!-<= (cursor!-1 cursor!-2)
+  (<= curr-index-1 curr-index-2))
+
+(export 'multi-cursor-list!)
+(export 'cursors)
+(defobj multi-cursor-list!
+  (size 0 :type integer)
+  (head nil :type (or null list-node!))
+  (tail nil :type (or null list-node!))
+  (iter-cursor nil :type (or null cursor!))
+  (cursors nil :type (or null cons)))
+
+(export 'create-cursor!)
+(defobjfun create-cursor! (l-multi-cursor-list! index)
+  (if (and (<= index l-size) (>= index 0))
+      (make-cursor! :curr-index index :curr-node (get-node-by-index l index))
+      (error "my-list:create-cursor! index out of bound.~%")))
+
+(export 'create-multi-cursor-list!)
+(defun create-multi-cursor-list! ()
+  (objlet* ((multi-cursor-list! (make-multi-cursor-list!)))
+    (setf head (make-list-node! :data "head"))
+    (setf tail (make-list-node! :data "tail"))
+    (setf (list-node!-next-node head) tail)
+    (setf (list-node!-prev-node tail) head)
+
+    (objlet* ((cursor! (make-cursor! :curr-index 0 :curr-node head)))
+      (setf iter-cursor cursor!)
+      (sorted-push cursor! cursors #'cursor!-<=))
+
+    multi-cursor-list!))
+
+(export 'do-cursor)
+(defobjmacro do-cursor ((cursor! multi-cursor-list!) &body body)
+  `(objdolist (,cursor! ,cursors)
+     ,@body))
+
+;; (maphash #'(lambda (,user-name cursors)
+;;                 (objdolist (,cursor! cursors)
+;;                   ,@body))
+;;     (cursors-table ,multi-cursor-list!))
+
+(defmethod print-object ((list multi-cursor-list!) out)
+  (print-unreadable-object (list out :type t)
+    (format out "(size = ~d, cursors at" (multi-cursor-list!-size list))
+    (do-cursor (cursor! list)
+      (format out " ~a" curr-index))
+    (format out ")"))
+
+  ;; (do ((node (head list) (next-node node)))
+  ;;     ((eq node nil))
+  ;;   (format out "~%")
+  ;;   (print-object node out)
+  ;;   (do-cursor (cursor! list)
+  ;;     (if (eq node curr-node)
+  ;;         (progn
+  ;;           (format out " ^")
+  ;;           (if (eq (iter-cursor list) cursor!)
+  ;;               (format out "iter")
+  ;;               (format out "user"))))))
+
+  )
+
+(defobjfun get-node-by-index (l-multi-cursor-list! index)
+  (if (and (<= index l-size) (>= index 0))
+      (objlet* ((ret-list-node! l-head))
+        (repeat index
+                (setf ret ret-next-node))
+        ret)
+      (error "Requested index is greater than size of list.")))
+
+(export 'insert-data-after-cursor)
+(defobjfun insert-data-after-cursor (l-multi-cursor-list! cursor! data)
+  (let ((curr-next-node (list-node!-next-node curr-node))
+        (new-node (make-list-node! :data data)))
+    ;; insert new-node in the list
+    (setf (list-node!-next-node curr-node) new-node)
+    (setf (list-node!-prev-node new-node) curr-node)
+    (setf (list-node!-next-node new-node) curr-next-node)
+    (setf (list-node!-prev-node curr-next-node) new-node)
+    ;; update list
+    (incf l-size)
+    ;; update all cursors greater than current cursor
+    (do-cursor (iter-cursor! l)
+      (if (> iter-curr-index curr-index)
+          (incf iter-curr-index)))
+    ;; update current node and index
+    (setf curr-node new-node)
+    (incf curr-index)
+    l))
+
+(export 'delete-data-before-cursor)
+(defobjfun delete-data-before-cursor (l-multi-cursor-list! cursor!)
+  (if (not-eq curr-node l-head)
+      (let ((curr-prev-node (list-node!-prev-node curr-node))
+            (curr-next-node (list-node!-next-node curr-node)))
+        ;; delete curr node in the list
+        (setf (list-node!-next-node curr-prev-node) curr-next-node)
+        (setf (list-node!-prev-node curr-next-node) curr-prev-node)
+        ;; update list
+        (decf l-size)
+        ;; update all cursors greater than or equal to current cursor
+        (do-cursor (iter-cursor! l)
+          (cond ((> iter-curr-index curr-index)
+                 (decf iter-curr-index))
+                ((= iter-curr-index curr-index)
+                 (progn
+                   (decf iter-curr-index)
+                   (setf iter-curr-node curr-prev-node)))))))
+  l)
+
+(export 'move-cursor-to-prev)
+(defobjfun move-cursor-to-prev (multi-cursor-list! cursor!)
+  (if (not-eq curr-node head)
+      (progn
+        (setf curr-node (list-node!-prev-node curr-node))
+        (decf curr-index)))
+  cursor!)
+
+(export 'move-cursor-to-next)
+(defobjfun move-cursor-to-next (multi-cursor-list! cursor!)
+
+  (if (not-eq (list-node!-next-node curr-node) tail)
+      (progn
+        (setf curr-node (list-node!-next-node curr-node))
+        (incf curr-index)))
+  cursor!)
+
+(export 'move-cursor-to-head)
+(defobjfun move-cursor-to-head (multi-cursor-list! cursor!)
+  (setf curr-node head)
+  (setf curr-index 0)
+  cursor!)
+
+(export 'move-cursor-to-last)
+(defobjfun move-cursor-to-last (multi-cursor-list! cursor!)
+  (setf curr-node (list-node!-prev-node tail))
+  (setf curr-index size)
+  cursor!)
+ 
+(export 'move-cursor-to-index)
+(defobjfun move-cursor-to-index (multi-cursor-list! cursor! index)
+  (if (and (>= index 0) (<= index size))
+      (let ((diff (- index curr-index)))
+        (if (>= diff 0)
+            (repeat diff (move-cursor-to-next multi-cursor-list! cursor!))
+            (repeat (- diff) (move-cursor-to-prev multi-cursor-list! cursor!))))
+      (error "index out of bound"))
+  cursor!)
+
+(export 'split-list-after-cursor)
+(defobjfun split-list-after-cursor (multi-cursor-list! cursor!)
+  (if (eq cursor! iter-cursor)
+      (error "iter-cursor is used to split list"))
+  (objlet* ((new-multi-cursor-list! (make-multi-cursor-list!))
+            (curr-next (list-node!-next-node curr-node)))
+    (setf new-head (make-list-node! :data "head"))
+    (setf new-tail (make-list-node! :data "tail"))
+    (setf (list-node!-next-node new-head) new-tail)
+    (setf (list-node!-prev-node new-tail) new-head)
+
+    ;; change node relations
+    (setf (list-node!-next-node new-head) curr-next)
+    (setf (list-node!-prev-node curr-next) new-head)
+    (setf (list-node!-next-node curr-node) new-tail)
+    (setf (list-node!-prev-node new-tail) curr-node)
+
+    ;; modify head tail
+    (let ((temp-tail tail))
+      (setf tail new-tail)
+      (setf new-tail temp-tail))
+
+    ;; modify size
+    (setf new-size (- size curr-index))
+    (setf size curr-index)
+
+    (sort cursors #'cursor!-<=)
+
+    ;; set cursors
+    (do* ((curr-cursors cursors (cdr curr-cursors)))
+         ((eq curr-cursors nil))
+      (let* ((cursor (car curr-cursors)))
+        (if (eq cursor cursor!)
+            (progn
+              ;; move curr-cursors further to the last with same index
+              (while (and (cdr curr-cursors) (not-eq (index-of cursor) (index-of (cadr curr-cursors))))
+                (setq curr-cursors (cdr curr-cursors)))
+
+              ;; split cursors
+              (setf new-cursors (cdr curr-cursors))
+              (setf (cdr curr-cursors) nil)
+
+              ;; modify curr-size of new cursors
+              (objdolist (new-cursor! new-cursors)
+                (decf new-curr-index size))
+
+              ;; update cursor
+              (setf cursors (delete cursor cursors))
+              (move-cursor-to-head new-multi-cursor-list! cursor)
+              (sorted-push cursor new-cursors #'cursor!-<=)
+              (return)))))
+
+    (objlet* ((cursor! (make-cursor! :curr-index 0 :curr-node new-head)))
+      (setf new-iter-cursor cursor!)
+      (sorted-push cursor! new-cursors #'cursor!-<=))
+
+    new-multi-cursor-list!))
+
+(export 'merge-list-to-prev)
+(defobjfun merge-list-to-prev (multi-cursor-list!-1 multi-cursor-list!-2)
+  ;; size
+  (incf size-1 size-2)
+  ;; node
+  (let ((last-1 (list-node!-prev-node tail-1))
+        (next-2 (list-node!-next-node head-2)))
+    (setf (list-node!-next-node last-1) next-2)
+    (setf (list-node!-prev-node next-2) last-1)
+    (setf tail-1 tail-2))
+  ;; cursors
+  (let ((merging-cursors cursors-2))
+    ;; increase curr-index of cursors in list 2 by size of list 1
+    (objdolist (cursor! merging-cursors)
+      (incf curr-index size-1))
+
+    ;; remove iter cursor in cursors 2
+    (setf merging-cursors (remove iter-cursor-2 merging-cursors))
+    (nconc cursors-1 merging-cursors)))
+
+(export 'get-data)
+(defobjmacro get-data (cursor!)
+  `(list-node!-data ,curr-node))
+
+(export 'is-cursor-last)
+(declaim (inline is-cursor-last))
+(defobjfun is-cursor-last (multi-cursor-list! cursor!)
+  (eq size curr-index))
+
+(export 'same-indices?)
+(declaim (inline same-indices?))
+(defobjfun same-indices? (cursor!-1 cursor!-2)
+  (eq curr-index-1 curr-index-2))
+
+(export 'index-of)
+(defobjmacro index-of (cursor!)
+  `,curr-index)
+
+(export 'is-empty)
+(defobjmacro is-empty (multi-cursor-list!)
+  `(eq ,size 0))
+
+(export 'get-default-cursor)
+(declaim (inline get-default-cursor))
+(defobjfun get-default-cursor (multi-cursor-list!)
+  iter-cursor)
+
+(export 'push-cursor!)
+(declaim (inline push-cursor!))
+(defobjfun push-cursor! (l-multi-cursor-list! cursor!)
+  (sorted-push cursor! l-cursors #'cursor!-<=))
+
+(export 'remove-cursor!)
+(declaim (inline remove-cursor!))
+(defobjfun remove-cursor! (l-multi-cursor-list! cursor!)
+  (remove-el cursor! l-cursors))
+
+(export 'get-size)
+(defobjmacro get-size (multi-cursor-list!)
+  `,size)
+
+(export 'list-multi-cursor-list!)
+(export 'l-multi-cursor-list!)
+(export 'cursor-cursor!)
+(export 'c-cursor!)
+(export 'lc-cursor!)
