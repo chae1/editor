@@ -62,74 +62,51 @@ namespace engine {
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> presentModes;
     };
-
+    
     struct Vertex {
 	glm::vec4 pos;
 	glm::vec2 texCoord;
-
-	static VkVertexInputBindingDescription getBindingDescription() {
-            VkVertexInputBindingDescription bindingDescription{};
-            bindingDescription.binding = 0;
-            bindingDescription.stride = sizeof(Vertex);
-            bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-
-            return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-            std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-
-            attributeDescriptions[0].binding = 0;
-            attributeDescriptions[0].location = 0;
-            attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-	    attributeDescriptions[1].binding = 0;
-            attributeDescriptions[1].location = 1;
-            attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescriptions[1].offset = offsetof(Vertex, texCoord);
-
-            return attributeDescriptions;
-	}
 
 	bool operator==(const Vertex& other) const {
             return pos == other.pos && texCoord == other.texCoord;
 	}
     };
-
-    const std::vector<Vertex> vertices {
-	{ { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-	{ { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-	{ { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
-	{ { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }
-    };
-
-    const std::vector<uint32_t> indices {
-	0, 1, 3, 1, 2, 3
-    };
-
-    struct InstanceData {
-	glm::mat4 modelMatrix;
+    
+    struct ShaderBufferObject {
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
 	glm::vec3 color;
-	int char_index;
+	int charIndex;
     };
+    
+    // class InstanceBuffer {
+    // public:
+    // 	VkBuffer buffer;
+    // 	VkDeviceMemory memory;
 
-    class InstanceDataContainer {
-    public:
-	void insert(const InstanceData& data);
-	void reset();
-	void clear();
-	InstanceData* get_pointer();
-	int get_size();
-	void update();
+    // private:
+    // 	uint32_t instanceCount = 8192;
+    // 	std::vector<InstanceData> instances;
+    // };
+    
+    // class InstanceDataContainer {
+    // public:
+    // 	void insert(const InstanceData& data);
+    // 	void reset();
+    // 	void clear();
+    // 	InstanceData* get_pointer();
+    // 	int get_size();
+    // 	void update();
 	
-    private:
-	int curr_size = 0;
-	int buffer_size = 0;
-	std::vector<InstanceData> data_buffer;	
-    };
+    // private:
+    // 	int curr_size = 0;
+    // 	int buffer_size = 0;
+    // 	std::vector<InstanceData> data_buffer;	
+    // };
 
     struct UniformBufferObject {
+	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 proj;
     };
@@ -181,24 +158,58 @@ namespace engine {
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
 
-	InstanceDataContainer instanceDataContainer;
+	// InstanceDataContainer instanceDataContainer;
+	
+	const std::vector<Vertex> vertices {
+	    { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+	    { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+	    { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+	    { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }
+	};
 
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
 
+	const std::vector<uint32_t> indices {
+	    0, 1, 3, 1, 2, 3
+	};
+	
 	VkBuffer indexBuffer;
 	VkDeviceMemory indexBufferMemory;
 
+	// uint32_t instanceCount = 1;
+	// std::vector<InstanceData> instances;
+	// VkBuffer instanceBuffer;
+	// VkDeviceMemory instanceBufferMemory;
+	// void* instanceBufferMemoryMapped;
+
+	int ssboCount = 1;
+	std::vector<VkBuffer> ssboBuffers;
+	std::vector<VkDeviceMemory> ssboBuffersMemory;
+	std::vector<void*> ssboBuffersMapped;
+	
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 	std::vector<void*> uniformBuffersMapped;
-
+	
+	std::vector<size_t> fontBuffersSize;
 	std::vector<VkBuffer> fontBuffers;
 	std::vector<VkDeviceMemory> fontBuffersMemory;
 
+	VkDescriptorSetLayout ssboDescriptorSetLayout;
+	VkDescriptorPool ssboDescriptorpool;
+	std::vector<VkDescriptorSet> ssboDescriptorsets;
+	
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
+	
+	VkDescriptorSetLayout fontDescriptorSetLayout;
+	VkDescriptorPool fontDescriptorPool;
+	std::vector<VkDescriptorSet> fontDescriptorSets;
+
+	VkPipelineLayout pipelineLayout;
+	VkPipeline graphicsPipeline;
 
 	
 	
@@ -223,11 +234,19 @@ namespace engine {
 
 	    createVertexBuffer();
 	    createIndexBuffer();
+
+	    createSsboBuffers();
 	    createUniformBuffers();
-	    createFontBuffers();
+	    // createFontBuffers();
 
 	    createDescriptorSetLayout();
-	    
+	    createDescriptorPool();
+	    createDescriptorSets();
+
+	    createFontDescriptorSetLayout();
+	    createFontDescriptorPool();
+	    createFontDescriptorSets();
+
 	    // draw
 	    updateInstanceDataContainer();
 	}
@@ -243,16 +262,28 @@ namespace engine {
 	}
 	
 	void clean_up() {
-	    for (int i = 0; i < 12; i++) {
-		vkDestroyBuffer(device, fontBuffers[i], nullptr);
-		vkFreeMemory(device, fontBuffersMemory[i], nullptr);
-	    }
+	    vkDestroyDescriptorPool(device, ssboDescriptorpool, nullptr);
+	    // vkDestroyDescriptorPool(device, fontDescriptorPool, nullptr);
+	    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
+	    // for (int i = 0; i < 12; i++) {
+	    // 	vkDestroyBuffer(device, fontBuffers[i], nullptr);
+	    // 	vkFreeMemory(device, fontBuffersMemory[i], nullptr);
+	    // }
+
+	    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		vkDestroyBuffer(device, ssboBuffers[i], nullptr);
+		vkFreeMemory(device, ssboBuffersMemory[i], nullptr);
+            }
+	    
 	    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
 		vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
             }
 
+	    // vkDestroyBuffer(device, instanceBuffer, nullptr);
+            // vkFreeMemory(device, instanceBufferMemory, nullptr);
+	    
 	    vkDestroyBuffer(device, indexBuffer, nullptr);
             vkFreeMemory(device, indexBufferMemory, nullptr);
 
@@ -289,13 +320,14 @@ namespace engine {
 	
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat findDepthFormat();
-	void createRenderPass();
-	
+
+	void createRenderPass();	
 	void createFramebuffers();
+
 	void createCommandPool();
 	void createCommandBuffers();
 
-	void updateInstanceDataContainer();
+	// void updateInstanceDataContainer();
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
@@ -305,14 +337,24 @@ namespace engine {
 	
 	void createVertexBuffer();
 	void createIndexBuffer();
+	
+	// void createInstanceBuffer();
+
+	void createSsboBuffers();
 	void createUniformBuffers();
-	void createFontBuffers();
+	// void createFontBuffers();
 
 	void createDescriptorSetLayout();
 	void createDescriptorPool();
 	void createDescriptorSets();
 
-	
+	void createFontDescriptorSetLayout();
+	void createFontDescriptorPool();
+	void createFontDescriptorSets();
+
+	VkShaderModule createShaderModule(const std::vector<char>& code);
+	void createGraphicsPipeline();
+
 	
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	

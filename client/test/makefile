@@ -1,8 +1,8 @@
 CC = g++
-CXXFLAGS = -std=c++2a
+CXXFLAGS = -std=c++2a -Wall -g
 INCLUDES =
 LIBRARIES =
-LFLAGS =
+LFLAGS = -lfmt
 
 SRCS = $(wildcard *.cpp)
 OBJS = $(SRCS:.cpp=.exe)

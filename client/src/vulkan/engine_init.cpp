@@ -1,6 +1,8 @@
 #include "engine.h"
 #include <cstring>
 #include <vulkan/vulkan_core.h>
+#include <fstream>
+
 
 using namespace engine;
 
@@ -10,40 +12,40 @@ void Engine::init_font() {
     
 }
 
-inline void InstanceDataContainer::insert(const InstanceData& data) {
-    if (curr_size < buffer_size) {
-	data_buffer[curr_size] = data;
-	curr_size++;
-    } else if (curr_size == buffer_size) {
-	data_buffer.push_back(data);
-	curr_size++;
-	buffer_size++;
-    }
-}
+// inline void InstanceDataContainer::insert(const InstanceData& data) {
+//     if (curr_size < buffer_size) {
+// 	data_buffer[curr_size] = data;
+// 	curr_size++;
+//     } else if (curr_size == buffer_size) {
+// 	data_buffer.push_back(data);
+// 	curr_size++;
+// 	buffer_size++;
+//     }
+// }
 
-inline void InstanceDataContainer::reset() {
-    data_buffer.clear();
-    curr_size = 0;
-    buffer_size = 0;
-}
+// inline void InstanceDataContainer::reset() {
+//     data_buffer.clear();
+//     curr_size = 0;
+//     buffer_size = 0;
+// }
 
-inline void InstanceDataContainer::clear() {
-    curr_size = 0;
-}
+// inline void InstanceDataContainer::clear() {
+//     curr_size = 0;
+// }
 
-inline InstanceData* InstanceDataContainer::get_pointer() {
-    return data_buffer.data();
-}
+// inline InstanceData* InstanceDataContainer::get_pointer() {
+//     return data_buffer.data();
+// }
 
-inline int InstanceDataContainer::get_size() {
-    return curr_size;
-}
+// inline int InstanceDataContainer::get_size() {
+//     return curr_size;
+// }
 
-inline void InstanceDataContainer::update() {
-    clear();
-    InstanceData character_data { { glm::mat4(1.0f) }, { 1.0f, 1.0f, 1.0f }, 0 };
-    insert(character_data);
-}
+// inline void InstanceDataContainer::update() {
+//     clear();
+//     InstanceData character_data { { glm::mat4(1.0f) }, { 1.0f, 1.0f, 1.0f }, 0 };
+//     insert(character_data);
+// }
 
 bool checkValidationLayerSupport() {
     uint32_t layerCount;
@@ -609,9 +611,9 @@ void Engine::createCommandBuffers() {
     }
 }
 
-void Engine::updateInstanceDataContainer() {
-    instanceDataContainer.update();
-}
+// void Engine::updateInstanceDataContainer() {
+//     instanceDataContainer.update();
+// }
 
 uint32_t Engine::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -737,72 +739,116 @@ void Engine::createIndexBuffer() {
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
+// void Engine::createInstanceBuffer() {
+//     instances.resize(instanceCount);
+//     instances[0] = InstanceData{ glm::mat4{ 1.0f }, { 0.0f, 0.0f, 0.0f }, 1, 1 };
+
+//     VkDeviceSize bufferSize = sizeof(InstanceData) * instances.size();
+//     createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, instanceBuffer, instanceBufferMemory);
+//     vkMapMemory(device, instanceBufferMemory, 0, bufferSize, 0, &instanceBufferMemoryMapped);
+
+//     memcpy(instanceBufferMemoryMapped, instances.data(), sizeof(InstanceData) * instances.size());
+// }
+
+void Engine::createSsboBuffers() {
+    ssboBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    VkDeviceSize bufferSize = sizeof(ShaderBufferObject) * ssboCount;
+    ssboBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+    ssboBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ssboBuffers[i], ssboBuffersMemory[i]);
+        vkMapMemory(device, ssboBuffersMemory[i], 0, bufferSize, 0, &ssboBuffersMapped[i]);
+
+	std::vector<ShaderBufferObject> objs { static_cast<size_t>(ssboCount) };
+	
+	ShaderBufferObject ssbo{};
+	ssbo.model = glm::rotate(glm::mat4(1.0f), 0 * glm::radians(90.0f),
+glm::vec3(0.0f, 0.0f, 1.0f));
+        ssbo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ssbo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
+        ssbo.proj[1][1] *= -1;
+	
+	memcpy(ssboBuffersMapped[i], objs.data(), sizeof(ssbo) * objs.size());
+    }
+}
+
 void Engine::createUniformBuffers() {
-    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
     uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
     uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
     uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
         vkMapMemory(device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+
+	UniformBufferObject ubo{};
+        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
+        ubo.proj[1][1] *= -1;
+
+	memcpy(uniformBuffersMapped[i], &ubo, sizeof(ubo));
     }
 }
 
-void Engine::createFontBuffers() {
-    vector<VkDeviceSize> buffersSize = {
-	sizeof(int) * font_info.split_left_offset_buffer.size(), 
-	sizeof(int) * font_info.split_left_size_buffer.size(),
-	sizeof(Curve) * font_info.split_left_curve_buffer.size(),
-	sizeof(int) * font_info.split_right_offset_buffer.size(), 
-	sizeof(int) * font_info.split_right_size_buffer.size(),
-	sizeof(Curve) * font_info.split_right_curve_buffer.size(),
-	sizeof(int) * font_info.split_up_offset_buffer.size(), 
-	sizeof(int) * font_info.split_up_size_buffer.size(),
-	sizeof(Curve) * font_info.split_up_curve_buffer.size(),
-	sizeof(int) * font_info.split_down_offset_buffer.size(), 
-	sizeof(int) * font_info.split_down_size_buffer.size(),
-	sizeof(Curve) * font_info.split_down_curve_buffer.size()
-    };
-    vector<VkBuffer> stagingBuffers;
-    vector<VkDeviceMemory> stagingBuffersMemory;
-    vector<void*> stagingBuffersMapped;
+// void Engine::createFontBuffers() {
+//     fontBuffersSize = vector<VkDeviceSize> {
+// 	sizeof(int) * font_info.split_left_offset_buffer.size(), 
+// 	sizeof(int) * font_info.split_left_size_buffer.size(),
+// 	sizeof(Curve) * font_info.split_left_curve_buffer.size(),
+// 	sizeof(int) * font_info.split_right_offset_buffer.size(), 
+// 	sizeof(int) * font_info.split_right_size_buffer.size(),
+// 	sizeof(Curve) * font_info.split_right_curve_buffer.size(),
+// 	sizeof(int) * font_info.split_up_offset_buffer.size(), 
+// 	sizeof(int) * font_info.split_up_size_buffer.size(),
+// 	sizeof(Curve) * font_info.split_up_curve_buffer.size(),
+// 	sizeof(int) * font_info.split_down_offset_buffer.size(), 
+// 	sizeof(int) * font_info.split_down_size_buffer.size(),
+// 	sizeof(Curve) * font_info.split_down_curve_buffer.size()
+//     };
     
-    stagingBuffers.resize(12);
-    stagingBuffersMemory.resize(12);
-    stagingBuffersMapped.resize(12);
-
-    fontBuffers.resize(12);
-    fontBuffersMemory.resize(12);
+//     vector<VkBuffer> stagingBuffers;
+//     vector<VkDeviceMemory> stagingBuffersMemory;
+//     vector<void*> stagingBuffersMapped;
     
-    for (int i = 0; i < 12; i++) {
-	createBuffer(buffersSize[i], VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffers[i], stagingBuffersMemory[i]);
-	vkMapMemory(device, stagingBuffersMemory[i], 0, buffersSize[i], 0, &stagingBuffersMapped[i]);
-    }
+//     stagingBuffers.resize(12);
+//     stagingBuffersMemory.resize(12);
+//     stagingBuffersMapped.resize(12);
 
-    memcpy(stagingBuffersMapped[0], font_info.split_left_offset_buffer.data(), (size_t) buffersSize[0]);
-    memcpy(stagingBuffersMapped[1], font_info.split_left_size_buffer.data(), (size_t) buffersSize[1]);
-    memcpy(stagingBuffersMapped[2], font_info.split_left_curve_buffer.data(), (size_t) buffersSize[2]);
-    memcpy(stagingBuffersMapped[3], font_info.split_right_offset_buffer.data(), (size_t) buffersSize[3]);
-    memcpy(stagingBuffersMapped[4], font_info.split_right_size_buffer.data(), (size_t) buffersSize[4]);
-    memcpy(stagingBuffersMapped[5], font_info.split_right_curve_buffer.data(), (size_t) buffersSize[5]);
-    memcpy(stagingBuffersMapped[6], font_info.split_up_offset_buffer.data(), (size_t) buffersSize[6]);
-    memcpy(stagingBuffersMapped[7], font_info.split_up_size_buffer.data(), (size_t) buffersSize[7]);
-    memcpy(stagingBuffersMapped[8], font_info.split_up_curve_buffer.data(), (size_t) buffersSize[8]);
-    memcpy(stagingBuffersMapped[9], font_info.split_down_offset_buffer.data(), (size_t) buffersSize[9]);
-    memcpy(stagingBuffersMapped[10], font_info.split_down_size_buffer.data(), (size_t) buffersSize[10]);
-    memcpy(stagingBuffersMapped[11], font_info.split_down_curve_buffer.data(), (size_t) buffersSize[11]);   
+//     fontBuffers.resize(12);
+//     fontBuffersMemory.resize(12);
+    
+//     for (int i = 0; i < 12; i++) {
+// 	createBuffer(fontBuffersSize[i], VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffers[i], stagingBuffersMemory[i]);
+// 	vkMapMemory(device, stagingBuffersMemory[i], 0, fontBuffersSize[i], 0, &stagingBuffersMapped[i]);
+//     }
 
-    for (int i = 0; i < 12; i++) {
-	vkUnmapMemory(device, stagingBuffersMemory[i]);
-	createBuffer(buffersSize[i], VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, fontBuffers[i], fontBuffersMemory[i]);
-	copyBuffer(stagingBuffers[i], fontBuffers[i], buffersSize[i]);
-	vkDestroyBuffer(device, stagingBuffers[i], nullptr);
-	vkFreeMemory(device, stagingBuffersMemory[i], nullptr);
-    }
-}
+//     memcpy(stagingBuffersMapped[0], font_info.split_left_offset_buffer.data(), (size_t) fontBuffersSize[0]);
+//     memcpy(stagingBuffersMapped[1], font_info.split_left_size_buffer.data(), (size_t) fontBuffersSize[1]);
+//     memcpy(stagingBuffersMapped[2], font_info.split_left_curve_buffer.data(), (size_t) fontBuffersSize[2]);
+//     memcpy(stagingBuffersMapped[3], font_info.split_right_offset_buffer.data(), (size_t) fontBuffersSize[3]);
+//     memcpy(stagingBuffersMapped[4], font_info.split_right_size_buffer.data(), (size_t) fontBuffersSize[4]);
+//     memcpy(stagingBuffersMapped[5], font_info.split_right_curve_buffer.data(), (size_t) fontBuffersSize[5]);
+//     memcpy(stagingBuffersMapped[6], font_info.split_up_offset_buffer.data(), (size_t) fontBuffersSize[6]);
+//     memcpy(stagingBuffersMapped[7], font_info.split_up_size_buffer.data(), (size_t) fontBuffersSize[7]);
+//     memcpy(stagingBuffersMapped[8], font_info.split_up_curve_buffer.data(), (size_t) fontBuffersSize[8]);
+//     memcpy(stagingBuffersMapped[9], font_info.split_down_offset_buffer.data(), (size_t) fontBuffersSize[9]);
+//     memcpy(stagingBuffersMapped[10], font_info.split_down_size_buffer.data(), (size_t) fontBuffersSize[10]);
+//     memcpy(stagingBuffersMapped[11], font_info.split_down_curve_buffer.data(), (size_t) fontBuffersSize[11]);   
+
+//     for (int i = 0; i < 12; i++) {
+// 	vkUnmapMemory(device, stagingBuffersMemory[i]);
+// 	createBuffer(fontBuffersSize[i], VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, fontBuffers[i], fontBuffersMemory[i]);
+// 	copyBuffer(stagingBuffers[i], fontBuffers[i], fontBuffersSize[i]);
+// 	vkDestroyBuffer(device, stagingBuffers[i], nullptr);
+// 	vkFreeMemory(device, stagingBuffersMemory[i], nullptr);
+//     }
+// }
 
 void Engine::createDescriptorSetLayout() {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -810,15 +856,8 @@ void Engine::createDescriptorSetLayout() {
     uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     uboLayoutBinding.pImmutableSamplers = nullptr;
 
-    VkDescriptorSetLayoutBinding fontLayoutBinding{};
-    uboLayoutBinding.binding = 1;
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.descriptorCount = 1;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    uboLayoutBinding.pImmutableSamplers = nullptr;
+    bindings.push_back(uboLayoutBinding);
     
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, fontLayoutBinding };
-
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
@@ -826,6 +865,28 @@ void Engine::createDescriptorSetLayout() {
 
     if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor set layout!");
+    }
+}
+
+void Engine::createFontDescriptorSetLayout() {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+    for (int i = 0; i < 12; i++) {
+	bindings.push_back(VkDescriptorSetLayoutBinding {
+	    .binding = static_cast<uint32_t>(i),
+	    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+	    .descriptorCount = 1,
+	    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+	    .pImmutableSamplers = nullptr });
+    }
+    
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &fontDescriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create font descriptor set layout!");
     }
 }
 
@@ -842,6 +903,22 @@ void Engine::createDescriptorPool() {
 
     if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
+    }
+}
+
+void Engine::createFontDescriptorPool() {
+    std::array<VkDescriptorPoolSize, 1> poolSizes{};
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = 12;
+        
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.maxSets = 1;
+
+    if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &fontDescriptorPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create font descriptor pool!");
     }
 }
 
@@ -877,4 +954,239 @@ void Engine::createDescriptorSets() {
 
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
+}
+
+void Engine::createFontDescriptorSets() {
+    std::vector<VkDescriptorSetLayout> layouts = { 1, fontDescriptorSetLayout };
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = fontDescriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = layouts.data();
+
+    fontDescriptorSets.resize(1);
+    if (vkAllocateDescriptorSets(device, &allocInfo, fontDescriptorSets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate font descriptor sets!");
+    }
+    
+    std::array<VkWriteDescriptorSet, 12> descriptorWrites{};
+    std::array<VkDescriptorBufferInfo, 12> buffersInfo{};
+    for (size_t i = 0; i < 12; i++) {
+        buffersInfo[i].buffer = fontBuffers[i];
+        buffersInfo[i].offset = 0;
+        buffersInfo[i].range = fontBuffersSize[i];
+
+        descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[i].dstSet = fontDescriptorSets[0];
+        descriptorWrites[i].dstBinding = i;
+        descriptorWrites[i].dstArrayElement = 0;
+        descriptorWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[i].descriptorCount = 1;
+        descriptorWrites[i].pBufferInfo = &buffersInfo[i];
+        descriptorWrites[i].pImageInfo = nullptr;
+        descriptorWrites[i].pTexelBufferView = nullptr;
+    }
+
+    vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+}
+
+VkShaderModule Engine::createShaderModule(const std::vector<char>& code) {
+    VkShaderModuleCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    createInfo.codeSize = code.size();
+    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create shader module!");
+    }
+
+    return shaderModule;
+}
+
+static std::vector<char> readFile(const std::string& filename) {
+    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file!");
+    }
+
+    size_t fileSize = (size_t) file.tellg();
+    std::cout << "size : " << fileSize << std::endl;
+    std::vector<char> buffer(fileSize);
+
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+    file.close();
+
+    return buffer;
+}
+
+void Engine::createGraphicsPipeline() {
+    auto vertShaderCode = readFile("vert.spv");
+    auto fragShaderCode = readFile("frag.spv");
+
+    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+
+    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertShaderStageInfo.module = vertShaderModule;
+    vertShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragShaderStageInfo.module = fragShaderModule;
+    fragShaderStageInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+    std::vector<VkDynamicState> dynamicStates = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.pDynamicStates = dynamicStates.data();
+
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions = {
+	VkVertexInputBindingDescription{ 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX },
+	VkVertexInputBindingDescription{ 1, sizeof(InstanceData), VK_VERTEX_INPUT_RATE_INSTANCE }
+    };
+
+    std::vector<VkVertexInputAttributeDescription> bindingAttributes = {
+	VkVertexInputAttributeDescription{ 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, pos) },
+	VkVertexInputAttributeDescription{ 1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord) },
+	VkVertexInputAttributeDescription{ 0, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord) }
+    };
+    
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float) swapChainExtent.width;
+    viewport.height = (float) swapChainExtent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = swapChainExtent;
+
+    VkPipelineViewportStateCreateInfo viewportState{};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.pViewports = &viewport;
+    viewportState.scissorCount = 1;
+    viewportState.pScissors = &scissor;
+
+    VkPipelineRasterizationStateCreateInfo rasterizer{};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+    rasterizer.depthBiasConstantFactor = 0.0f;
+    rasterizer.depthBiasClamp = 0.0f;
+    rasterizer.depthBiasSlopeFactor = 0.0f;
+
+    VkPipelineMultisampleStateCreateInfo multisampling{};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_TRUE;
+    multisampling.rasterizationSamples = msaaSamples;
+    multisampling.minSampleShading = 1.0f;
+    multisampling.pSampleMask = nullptr;
+    multisampling.alphaToCoverageEnable = VK_FALSE;
+    multisampling.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.minDepthBounds = 0.0f;
+    depthStencil.maxDepthBounds = 1.0f;
+    depthStencil.stencilTestEnable = VK_FALSE;
+    depthStencil.front = {};
+    depthStencil.back = {};
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+    colorBlending.blendConstants[0] = 0.0f;
+    colorBlending.blendConstants[1] = 0.0f;
+    colorBlending.blendConstants[2] = 0.0f;
+    colorBlending.blendConstants[3] = 0.0f;
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 0;
+    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create pipeline layout!");
+    }
+
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = nullptr;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.basePipelineIndex = -1;
+
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create graphics pipeline!");
+    }
+
+    vkDestroyShaderModule(device, fragShaderModule, nullptr);
+    vkDestroyShaderModule(device, vertShaderModule, nullptr);
+}
+
+    
 }
