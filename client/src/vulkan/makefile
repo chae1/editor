@@ -1,16 +1,22 @@
 CC = g++
-CXXFLAGS = -std=c++2a -Wall -g
+CXXFLAGS = -std=c++2a -Wall
 INCLUDES =
 LIBRARIES =
-LFLAGS = -lglfw -lvulkan
+LFLAGS = -lglfw -lvulkan -lfmt
 
 # SRCS = $(wildcard *.cpp)
 # OBJS = $(SRCS:.cpp=.o)
 
-all : main engine
+all: main engine_test
 
-main : main.cpp
+main: main.cpp
 	$(CC) $(CXXFLAGS) $< -o $@ $(INCLUDES) $(LIBRARIES) $(LFLAGS)
 
-engine : engine_test.cpp engine_init.cpp engine.h
-	g++ -std=c++2a -o engine_test engine_test.cpp engine_init.cpp ../glfw/glfw_window.cpp -lglfw -lvulkan
+engine_test: engine_test.cpp engine.cpp engine.h ../font/font.cpp ../font/font.h vert.spv frag.spv
+	$(CC) $(CXXFLAGS) -o $@ -g engine_test.cpp -g engine.cpp -g engine.h ../font/font.cpp $(LFLAGS)
+
+vert.spv: shader.vert
+	glslc shader.vert -o vert.spv
+
+frag.spv: shader.frag
+	glslc shader.frag -o frag.spv

@@ -393,7 +393,7 @@ private:
     void createDescriptorPool();
     void createDescriptorSets();
     void createSyncObjects();
-
+    
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
         glfwGetFramebufferSize(window, &width, &height);
         while (width == 0 || height == 0) {

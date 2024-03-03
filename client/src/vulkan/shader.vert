@@ -1,11 +1,55 @@
 #version 450
+#extension GL_EXT_debug_printf : enable
 
-vec2 positions[3] = vec2[](
-    vec2(0.0, -0.5),
-    vec2(0.5, 0.5),
-    vec2(-0.5, 0.5)
-);
+layout(location = 0) in vec4 inPos;
+layout(location = 1) in vec2 inTexCoord;
+
+layout(binding = 0) uniform UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+} ubo;
+
+struct StorageBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+    vec4 color;
+};
+
+layout(binding = 1) buffer StorageBuffer {
+    StorageBufferObject ssbos[];
+};
+
+layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec2 fragTexCoord;
 
 void main() {
-    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+    StorageBufferObject ssbo = ssbos[gl_InstanceIndex];
+    gl_Position =  ubo.proj * ubo.view * ubo.model * inPos;
+    fragColor = ssbo.color;
+    fragTexCoord = inTexCoord;
+    
+    debugPrintfEXT("\nvertex shader\n");
+    debugPrintfEXT("gl_VertexIndex %d\n", gl_VertexIndex);
+    debugPrintfEXT("inPos %1.2v4f\n", inPos);
+
+    debugPrintfEXT("ubo.model0 %1.2v4f\n", ubo.model[0]);
+    debugPrintfEXT("ubo.model1 %1.2v4f\n", ubo.model[1]);
+    debugPrintfEXT("ubo.model2 %1.2v4f\n", ubo.model[2]);
+    debugPrintfEXT("ubo.model3 %1.2v4f\n", ubo.model[3]);
+
+    debugPrintfEXT("ubo.view0 %1.2v4f\n", ubo.view[0]);
+    debugPrintfEXT("ubo.view1 %1.2v4f\n", ubo.view[1]);
+    debugPrintfEXT("ubo.view2 %1.2v4f\n", ubo.view[2]);
+    debugPrintfEXT("ubo.view3 %1.2v4f\n", ubo.view[3]);
+
+    debugPrintfEXT("ubo.proj0 %1.2v4f\n", ubo.proj[0]);
+    debugPrintfEXT("ubo.proj1 %1.2v4f\n", ubo.proj[1]);
+    debugPrintfEXT("ubo.proj2 %1.2v4f\n", ubo.proj[2]);
+    debugPrintfEXT("ubo.proj3 %1.2v4f\n", ubo.proj[3]);    
+    
+    debugPrintfEXT("vertex %d gl_Position %1.2v4f\n", gl_VertexIndex, gl_Position);
+    debugPrintfEXT("color %1.2v4f\n", ssbo.color);
+    debugPrintfEXT("texCoord %1.2v2f\n", inTexCoord);    
 }

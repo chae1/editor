@@ -7,6 +7,7 @@
 #include <set>
 #include <string>
 #include <array>
+#include <algorithm>
 
 #define FMT_HEADER_ONLY
 #include <fmt/core.h>
@@ -15,7 +16,7 @@
 
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan.h>
-#include "../glfw/glfw_window.h"
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #define GLM_FORCE_RADIANS
@@ -27,7 +28,6 @@
 
 #include "../font/font.h"
 
-using namespace glfw_window;
 using namespace font;
 
 namespace engine {
@@ -72,39 +72,13 @@ namespace engine {
 	}
     };
     
-    struct ShaderBufferObject {
+    struct StorageBufferObject {
 	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 proj;
-	glm::vec3 color;
-	int charIndex;
+	glm::vec4 color;
     };
     
-    // class InstanceBuffer {
-    // public:
-    // 	VkBuffer buffer;
-    // 	VkDeviceMemory memory;
-
-    // private:
-    // 	uint32_t instanceCount = 8192;
-    // 	std::vector<InstanceData> instances;
-    // };
-    
-    // class InstanceDataContainer {
-    // public:
-    // 	void insert(const InstanceData& data);
-    // 	void reset();
-    // 	void clear();
-    // 	InstanceData* get_pointer();
-    // 	int get_size();
-    // 	void update();
-	
-    // private:
-    // 	int curr_size = 0;
-    // 	int buffer_size = 0;
-    // 	std::vector<InstanceData> data_buffer;	
-    // };
-
     struct UniformBufferObject {
 	glm::mat4 model;
 	glm::mat4 view;
@@ -118,14 +92,15 @@ namespace engine {
 	    glfwInit();
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             window = glfwCreateWindow(width, height, title, nullptr, nullptr);
-            glfwSetWindowUserPointer(window, nullptr);
-            // glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+            glfwSetWindowUserPointer(window, this);
+            glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 	    glfwSetKeyCallback(window, func);
 	}
-
-	GLFWwindow* window;
 	
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+	~Engine() {
+	    glfwDestroyWindow(window);
+            glfwTerminate();
+	}
 
 	void run() {
 	    init_font();
@@ -137,28 +112,43 @@ namespace engine {
     private:
 	FontInfo font_info;
 	
+	GLFWwindow* window;
+
 	VkInstance instance;
 	VkSurfaceKHR surface;
 	VkDebugUtilsMessengerEXT debugMessenger;
 
+	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 	VkPhysicalDevice physicalDevice;
 	VkDevice device;
 
 	VkQueue graphicsQueue;
 	VkQueue presentQueue;
 
+	uint32_t mipLevels = 1;
+	
 	VkSwapchainKHR swapChain;
 	std::vector<VkImage> swapChainImages;
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 	std::vector<VkImageView> swapChainImageViews;
 	VkRenderPass renderPass;
-	std::vector<VkFramebuffer> swapChainFramebuffers;
 
+	VkImage colorImage;
+	VkDeviceMemory colorImageMemory;
+	VkImageView colorImageView;
+	
+	VkImage depthImage;
+	VkDeviceMemory depthImageMemory;
+	VkImageView depthImageView;
+
+	VkPipelineLayout pipelineLayout;
+	VkPipeline graphicsPipeline;	
+
+	std::vector<VkFramebuffer> swapChainFramebuffers;
+	
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
-
-	// InstanceDataContainer instanceDataContainer;
 	
 	const std::vector<Vertex> vertices {
 	    { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
@@ -177,41 +167,24 @@ namespace engine {
 	VkBuffer indexBuffer;
 	VkDeviceMemory indexBufferMemory;
 
-	// uint32_t instanceCount = 1;
-	// std::vector<InstanceData> instances;
-	// VkBuffer instanceBuffer;
-	// VkDeviceMemory instanceBufferMemory;
-	// void* instanceBufferMemoryMapped;
-
-	int ssboCount = 1;
-	std::vector<VkBuffer> ssboBuffers;
-	std::vector<VkDeviceMemory> ssboBuffersMemory;
-	std::vector<void*> ssboBuffersMapped;
-	
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 	std::vector<void*> uniformBuffersMapped;
 	
-	std::vector<size_t> fontBuffersSize;
-	std::vector<VkBuffer> fontBuffers;
-	std::vector<VkDeviceMemory> fontBuffersMemory;
-
-	VkDescriptorSetLayout ssboDescriptorSetLayout;
-	VkDescriptorPool ssboDescriptorpool;
-	std::vector<VkDescriptorSet> ssboDescriptorsets;
+	int ssboCount = 1;
+	VkBuffer storageBuffer;
+	VkDeviceMemory storageBufferMemory;
+	void* storageBufferMapped;
 	
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
 	
-	VkDescriptorSetLayout fontDescriptorSetLayout;
-	VkDescriptorPool fontDescriptorPool;
-	std::vector<VkDescriptorSet> fontDescriptorSets;
-
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;
-
-	
+	std::vector<VkSemaphore> imageAvailableSemaphores;
+	std::vector<VkSemaphore> renderFinishedSemaphores;
+	std::vector<VkFence> inFlightFences;
+	uint32_t currentFrame = 0;
+	bool framebufferResized = false;
 	
 	void init_font();
 	
@@ -224,31 +197,33 @@ namespace engine {
 	    pickPhysicalDevice();
 	    createLogicalDevice();
 
-	    createImageViews();
 	    createSwapChain();
+	    createImageViews();
+	    
 	    createRenderPass();
 
+	    createColorResources();
+	    createDepthResources();	    
 	    createFramebuffers();
+	    
 	    createCommandPool();
 	    createCommandBuffers();
 
 	    createVertexBuffer();
 	    createIndexBuffer();
 
-	    createSsboBuffers();
+	    createStorageBuffer();
 	    createUniformBuffers();
-	    // createFontBuffers();
 
 	    createDescriptorSetLayout();
 	    createDescriptorPool();
-	    createDescriptorSets();
+	    allocateDescriptorSets();
+	    updateDescriptorSets();
+	    
+	    createGraphicsPipeline();
 
-	    createFontDescriptorSetLayout();
-	    createFontDescriptorPool();
-	    createFontDescriptorSets();
-
+	    createSyncObjects();
 	    // draw
-	    updateInstanceDataContainer();
 	}
 	
 	void main_loop() {
@@ -258,76 +233,84 @@ namespace engine {
 	    
 	    while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
+		drawFrame();
 	    }
+	    
+	    vkDeviceWaitIdle(device);
 	}
 	
 	void clean_up() {
-	    vkDestroyDescriptorPool(device, ssboDescriptorpool, nullptr);
-	    // vkDestroyDescriptorPool(device, fontDescriptorPool, nullptr);
-	    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+	    cleanupSwapChain();
 
-	    // for (int i = 0; i < 12; i++) {
-	    // 	vkDestroyBuffer(device, fontBuffers[i], nullptr);
-	    // 	vkFreeMemory(device, fontBuffersMemory[i], nullptr);
-	    // }
+	    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+            vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+	    vkDestroyRenderPass(device, renderPass, nullptr);
 
-	    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroyBuffer(device, ssboBuffers[i], nullptr);
-		vkFreeMemory(device, ssboBuffersMemory[i], nullptr);
-            }
+	    vkDestroyBuffer(device, storageBuffer, nullptr);
+	    vkFreeMemory(device, storageBufferMemory, nullptr);
 	    
 	    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
 		vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
             }
-
-	    // vkDestroyBuffer(device, instanceBuffer, nullptr);
-            // vkFreeMemory(device, instanceBufferMemory, nullptr);
 	    
+	    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+
 	    vkDestroyBuffer(device, indexBuffer, nullptr);
             vkFreeMemory(device, indexBufferMemory, nullptr);
 
             vkDestroyBuffer(device, vertexBuffer, nullptr);
             vkFreeMemory(device, vertexBufferMemory, nullptr);
+
+	    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+		vkDestroyFence(device, inFlightFences[i], nullptr);
+            }
 	    
 	    vkDestroyCommandPool(device, commandPool, nullptr);
-	    for (auto framebuffer : swapChainFramebuffers) {
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
-	    }
-	    vkDestroyRenderPass(device, renderPass, nullptr);
-	    cleanupSwapChain();
+
 	    vkDestroyDevice(device, nullptr);
 	    vkDestroySurfaceKHR(instance, surface, nullptr);
 	    if (enableValidationLayers) {
 		DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
 	    }
 	    vkDestroyInstance(instance, nullptr);
+
+	    fmt::print("clean up vulkan\n");
 	}
 
 	void createInstance();
 	void createSurface();
 
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 	void setupDebugMessenger();
 	void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
+	VkSampleCountFlagBits getMaxUsableSampleCount();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
 	void createSwapChain();
 
-	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
+	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void createImageViews();
+
 	void cleanupSwapChain();
 	
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 	VkFormat findDepthFormat();
 
-	void createRenderPass();	
+	void createRenderPass();
+
+	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	void createColorResources();
+	void createDepthResources();
 	void createFramebuffers();
 
 	void createCommandPool();
 	void createCommandBuffers();
-
-	// void updateInstanceDataContainer();
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
@@ -338,25 +321,25 @@ namespace engine {
 	void createVertexBuffer();
 	void createIndexBuffer();
 	
-	// void createInstanceBuffer();
-
-	void createSsboBuffers();
 	void createUniformBuffers();
-	// void createFontBuffers();
+	void createStorageBuffer();
 
 	void createDescriptorSetLayout();
 	void createDescriptorPool();
-	void createDescriptorSets();
 
-	void createFontDescriptorSetLayout();
-	void createFontDescriptorPool();
-	void createFontDescriptorSets();
+	void allocateDescriptorSets();
+	void updateDescriptorSets();
 
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	void createGraphicsPipeline();
 
-	
+	void createSyncObjects();
+
+	void recreateSwapChain();
+	void updateUniformBuffer(uint32_t currentImage);
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-	
+	void drawFrame();
+
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
     };
 }
