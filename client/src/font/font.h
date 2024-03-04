@@ -70,7 +70,9 @@ namespace font {
 	vector<GlyphInfo> glyph_infos;
 
 	void generate_font_buffers();
-	
+
+	// ordered by glyph_index
+
 	vector<int> split_left_offset_buffer;
 	vector<int> split_left_size_buffer;
 	vector<Curve> split_left_curve_buffer;

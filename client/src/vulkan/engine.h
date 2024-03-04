@@ -73,10 +73,11 @@ namespace engine {
     };
     
     struct StorageBufferObject {
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
-	glm::vec4 color;
+	alignas(16) glm::mat4 model;
+	alignas(16) glm::mat4 view;
+	alignas(16) glm::mat4 proj;
+	alignas(16) glm::vec4 color;
+	alignas(16) int charId;
     };
     
     struct UniformBufferObject {
@@ -110,7 +111,7 @@ namespace engine {
 	}
 	
     private:
-	FontInfo font_info;
+	FontInfo fontInfo;
 	
 	GLFWwindow* window;
 
@@ -176,6 +177,12 @@ namespace engine {
 	VkDeviceMemory storageBufferMemory;
 	void* storageBufferMapped;
 	
+	std::vector<VkBuffer> glyphBuffers;
+	std::vector<VkDeviceMemory> glyphBuffersMemory;
+	std::vector<uint32_t> glyphBuffersElementSize;
+	std::vector<size_t> glyphBuffersLength;
+	std::vector<VkDeviceSize> glyphBuffersSize;
+	
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
@@ -214,7 +221,8 @@ namespace engine {
 
 	    createStorageBuffer();
 	    createUniformBuffers();
-
+	    createGlyphBuffers();
+	    
 	    createDescriptorSetLayout();
 	    createDescriptorPool();
 	    allocateDescriptorSets();
@@ -323,7 +331,8 @@ namespace engine {
 	
 	void createUniformBuffers();
 	void createStorageBuffer();
-
+	void createGlyphBuffers();
+	
 	void createDescriptorSetLayout();
 	void createDescriptorPool();
 
@@ -332,11 +341,13 @@ namespace engine {
 
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 	void createGraphicsPipeline();
-
 	void createSyncObjects();
 
 	void recreateSwapChain();
+
 	void updateUniformBuffer(uint32_t currentImage);
+	void updateStorageBuffer();
+
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	void drawFrame();
 

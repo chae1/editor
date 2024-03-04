@@ -9,9 +9,8 @@
 using namespace engine;
 
 void Engine::init_font() {
-    font_info.load_font("/home/chaewon/Desktop/chae1/editor/client/src/font/UbuntuMono-R/");
-    font_info.generate_font_buffers();
-    
+    fontInfo.load_font("/home/chaewon/Desktop/chae1/editor/client/src/font/UbuntuMono-R/");
+    fontInfo.generate_font_buffers();
 }
 
 bool checkValidationLayerSupport() {
@@ -891,17 +890,94 @@ void Engine::createStorageBuffer() {
     ssbo.view = glm::mat4(1.0f);
     ssbo.proj = glm::mat4(1.0f);
     ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    ssbo.charId = 0;
     
     objs[0] = ssbo;
     
     memcpy(storageBufferMapped, objs.data(), bufferSize);
 }
 
+void Engine::createGlyphBuffers() {
+    std::vector<void*> buffersData {
+	fontInfo.split_left_offset_buffer.data(),
+	fontInfo.split_left_size_buffer.data(),
+	fontInfo.split_left_curve_buffer.data(),
+	fontInfo.split_right_offset_buffer.data(),
+	fontInfo.split_right_size_buffer.data(),
+	fontInfo.split_right_curve_buffer.data(),
+	fontInfo.split_up_offset_buffer.data(),
+	fontInfo.split_up_size_buffer.data(),
+	fontInfo.split_up_curve_buffer.data(),
+	fontInfo.split_down_offset_buffer.data(),
+	fontInfo.split_down_size_buffer.data(),
+	fontInfo.split_down_curve_buffer.data()
+    };
+
+    glyphBuffersElementSize = std::vector<uint32_t> { sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve) };
+    
+    glyphBuffersLength = std::vector<size_t> {
+	fontInfo.split_left_offset_buffer.size(),
+	fontInfo.split_left_size_buffer.size(),
+	fontInfo.split_left_curve_buffer.size(),
+	fontInfo.split_right_offset_buffer.size(),
+	fontInfo.split_right_size_buffer.size(),
+	fontInfo.split_right_curve_buffer.size(),
+	fontInfo.split_up_offset_buffer.size(),
+	fontInfo.split_up_size_buffer.size(),
+	fontInfo.split_up_curve_buffer.size(),
+	fontInfo.split_down_offset_buffer.size(),
+	fontInfo.split_down_size_buffer.size(),
+	fontInfo.split_down_curve_buffer.size()
+    };
+    
+    std::vector<VkDeviceSize> buffersSize = {
+	sizeof(int) * fontInfo.split_left_offset_buffer.size(),
+	sizeof(int) * fontInfo.split_left_size_buffer.size(),
+	sizeof(Curve) * fontInfo.split_left_curve_buffer.size(),
+	sizeof(int) * fontInfo.split_right_offset_buffer.size(),
+	sizeof(int) * fontInfo.split_right_size_buffer.size(),
+	sizeof(Curve) * fontInfo.split_right_curve_buffer.size(),
+	sizeof(int) * fontInfo.split_up_offset_buffer.size(),
+	sizeof(int) * fontInfo.split_up_size_buffer.size(),
+	sizeof(Curve) * fontInfo.split_up_curve_buffer.size(),
+	sizeof(int) * fontInfo.split_down_offset_buffer.size(),
+	sizeof(int) * fontInfo.split_down_size_buffer.size(),
+	sizeof(Curve) * fontInfo.split_down_curve_buffer.size()
+    };
+
+    size_t bufNum = buffersData.size();
+
+    glyphBuffers.resize(bufNum);
+    glyphBuffersMemory.resize(bufNum);
+    glyphBuffersSize = buffersSize;
+    
+    for (size_t i = 0; i < bufNum; i++) {
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	createBuffer(buffersSize[i], VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(device, stagingBufferMemory, 0, buffersSize[i], 0, &data);
+	memcpy(data, buffersData[i], (size_t) buffersSize[i]);
+	vkUnmapMemory(device, stagingBufferMemory);
+
+	createBuffer(buffersSize[i], VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, glyphBuffers[i], glyphBuffersMemory[i]);
+	copyBuffer(stagingBuffer, glyphBuffers[i], buffersSize[i]);
+
+	vkDestroyBuffer(device, stagingBuffer, nullptr);
+	vkFreeMemory(device, stagingBufferMemory, nullptr);
+    }
+}
+
 void Engine::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {
 	{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-	{ 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, static_cast<uint32_t>(ssboCount), VK_SHADER_STAGE_VERTEX_BIT, nullptr }
+	{ 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }
     };
+    
+    for (size_t i = 0; i < glyphBuffers.size(); i++) {
+	bindings.push_back({ static_cast<uint32_t>(i + 2), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
+    }
     
     VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(bindings.size()), bindings.data() };
 
@@ -913,14 +989,14 @@ void Engine::createDescriptorSetLayout() {
 void Engine::createDescriptorPool() {
     std::vector<VkDescriptorPoolSize> poolSizes{
 	{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) },
-	{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * ssboCount) }
+	{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
     };
 
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    for (size_t i = 0; i < glyphBuffers.size(); i++) {
+	poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 });
+    }
+
+    VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), static_cast<uint32_t>(poolSizes.size()), poolSizes.data() };
 
     if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");
@@ -929,11 +1005,7 @@ void Engine::createDescriptorPool() {
 
 void Engine::allocateDescriptorSets() {
     std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    allocInfo.pSetLayouts = layouts.data();
+    VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, descriptorPool, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), layouts.data() };
 
     descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
     if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
@@ -943,38 +1015,24 @@ void Engine::allocateDescriptorSets() {
 
 void Engine::updateDescriptorSets() {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+	std::vector<VkDescriptorBufferInfo> buffersInfo{
+	    { uniformBuffers[i], 0, sizeof(UniformBufferObject) },
+	    { storageBuffer, 0, sizeof(StorageBufferObject) * ssboCount }
+	};
+
+	for (size_t j = 0; j < glyphBuffers.size(); j++) {
+	    buffersInfo.push_back({ glyphBuffers[j], 0, glyphBuffersSize[j] });    
+	}
+		
+	std::vector<VkWriteDescriptorSet> descriptorWrites{
+	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &buffersInfo[0], nullptr },
+	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &buffersInfo[1], nullptr }
+	};
 	
-        VkDescriptorBufferInfo uniformBufferInfo{};
-        uniformBufferInfo.buffer = uniformBuffers[i];
-        uniformBufferInfo.offset = 0;
-        uniformBufferInfo.range = sizeof(UniformBufferObject);
-
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptorSets[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &uniformBufferInfo;
-        descriptorWrites[0].pImageInfo = nullptr;
-        descriptorWrites[0].pTexelBufferView = nullptr;
-
-        VkDescriptorBufferInfo storageBufferInfo{};
-        storageBufferInfo.buffer = storageBuffer;
-        storageBufferInfo.offset = 0;
-        storageBufferInfo.range = sizeof(StorageBufferObject) * ssboCount;
-
-	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = descriptorSets[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pBufferInfo = &storageBufferInfo;
-        descriptorWrites[1].pImageInfo = nullptr;
-        descriptorWrites[1].pTexelBufferView = nullptr;
-
+	for (size_t j = 0; j < glyphBuffers.size(); j++) {
+	    descriptorWrites.push_back({ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], static_cast<uint32_t>(j + 2), 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &buffersInfo[j + 2], nullptr });
+	}
+	
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 }
@@ -1300,6 +1358,7 @@ void Engine::drawFrame() {
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
     vkResetCommandBuffer(commandBuffers[currentFrame], 0);
     recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+
     updateUniformBuffer(currentFrame);
 
     VkSubmitInfo submitInfo{};
