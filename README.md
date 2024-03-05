@@ -1,7 +1,5 @@
 # editor
 
-Text editor in progress.
-
 Expecting features :
 * simultaneous text editing (by multiple users)
 * 3d gpu rendering
