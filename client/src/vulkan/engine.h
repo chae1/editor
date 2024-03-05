@@ -31,7 +31,9 @@
 using namespace font;
 
 namespace engine {
-    // #define NDEBUG
+
+    #define NDEBUG
+
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
 #else
@@ -152,10 +154,10 @@ namespace engine {
 	std::vector<VkCommandBuffer> commandBuffers;
 	
 	const std::vector<Vertex> vertices {
-	    { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-	    { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-	    { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
-	    { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }
+	    { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
+	    { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+	    { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+	    { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }
 	};
 
 	VkBuffer vertexBuffer;
@@ -235,9 +237,9 @@ namespace engine {
 	}
 	
 	void main_loop() {
-	    std::thread { [&] {
+	    // std::thread { [&] {
 		
-	    } }.detach();
+	    // } }.detach();
 	    
 	    while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();

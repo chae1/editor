@@ -1,8 +1,10 @@
+
 (with-compilation-unit (:policy '(optimize debug))
-  (load "~/Desktop/chae1/editor/server/utility/my-utils.lisp")
-  (load "~/Desktop/chae1/editor/server/utility/defobj.lisp")
+  (load "/home/chaewon/Desktop/chae1/github/editor/server/utility/my-utils.lisp")
+  (load "/home/chaewon/Desktop/chae1/github/editor/server/utility/defobj.lisp")
 
   )
+
 
 (with-compilation-unit (:policy '(optimize speed))
   

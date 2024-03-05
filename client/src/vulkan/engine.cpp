@@ -9,8 +9,9 @@
 using namespace engine;
 
 void Engine::init_font() {
-    fontInfo.load_font("/home/chaewon/Desktop/chae1/editor/client/src/font/UbuntuMono-R/");
+    fontInfo.load_font("/home/chaewon/Desktop/chae1/github/editor/client/src/font/UbuntuMono-R/");
     fontInfo.generate_font_buffers();
+    fontInfo.print_font_buffers();
 }
 
 bool checkValidationLayerSupport() {
@@ -862,9 +863,10 @@ void Engine::createUniformBuffers() {
         vkMapMemory(device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
 
 	UniformBufferObject ubo{};
+	ubo.model = glm::mat4(1.0f);
         ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
         ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
-        ubo.proj[1][1] *= -1;
+        ubo.proj[1][1] *= 1;
 
 	memcpy(uniformBuffersMapped[i], &ubo, sizeof(ubo));
     }
@@ -890,7 +892,7 @@ void Engine::createStorageBuffer() {
     ssbo.view = glm::mat4(1.0f);
     ssbo.proj = glm::mat4(1.0f);
     ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    ssbo.charId = 0;
+    ssbo.charId = 54;
     
     objs[0] = ssbo;
     
@@ -910,10 +912,13 @@ void Engine::createGlyphBuffers() {
 	fontInfo.split_up_curve_buffer.data(),
 	fontInfo.split_down_offset_buffer.data(),
 	fontInfo.split_down_size_buffer.data(),
-	fontInfo.split_down_curve_buffer.data()
+	fontInfo.split_down_curve_buffer.data(),
+	fontInfo.offset_buffer.data(),
+	fontInfo.size_buffer.data(),
+	fontInfo.curve_buffer.data()
     };
 
-    glyphBuffersElementSize = std::vector<uint32_t> { sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve) };
+    glyphBuffersElementSize = std::vector<uint32_t> { sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve) };
     
     glyphBuffersLength = std::vector<size_t> {
 	fontInfo.split_left_offset_buffer.size(),
@@ -927,7 +932,10 @@ void Engine::createGlyphBuffers() {
 	fontInfo.split_up_curve_buffer.size(),
 	fontInfo.split_down_offset_buffer.size(),
 	fontInfo.split_down_size_buffer.size(),
-	fontInfo.split_down_curve_buffer.size()
+	fontInfo.split_down_curve_buffer.size(),
+	fontInfo.offset_buffer.size(),
+	fontInfo.size_buffer.size(),
+	fontInfo.curve_buffer.size()
     };
     
     std::vector<VkDeviceSize> buffersSize = {
@@ -942,7 +950,10 @@ void Engine::createGlyphBuffers() {
 	sizeof(Curve) * fontInfo.split_up_curve_buffer.size(),
 	sizeof(int) * fontInfo.split_down_offset_buffer.size(),
 	sizeof(int) * fontInfo.split_down_size_buffer.size(),
-	sizeof(Curve) * fontInfo.split_down_curve_buffer.size()
+	sizeof(Curve) * fontInfo.split_down_curve_buffer.size(),
+	sizeof(int) * fontInfo.offset_buffer.size(),
+	sizeof(int) * fontInfo.size_buffer.size(),
+	sizeof(Curve) * fontInfo.curve_buffer.size()
     };
 
     size_t bufNum = buffersData.size();
@@ -976,7 +987,7 @@ void Engine::createDescriptorSetLayout() {
     };
     
     for (size_t i = 0; i < glyphBuffers.size(); i++) {
-	bindings.push_back({ static_cast<uint32_t>(i + 2), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
+	bindings.push_back({ static_cast<uint32_t>(i + 2), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
     }
     
     VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(bindings.size()), bindings.data() };
@@ -1030,7 +1041,7 @@ void Engine::updateDescriptorSets() {
 	};
 	
 	for (size_t j = 0; j < glyphBuffers.size(); j++) {
-	    descriptorWrites.push_back({ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], static_cast<uint32_t>(j + 2), 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &buffersInfo[j + 2], nullptr });
+	    descriptorWrites.push_back({ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], static_cast<uint32_t>(j + 2), 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &buffersInfo[j + 2], nullptr });
 	}
 	
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
@@ -1334,7 +1345,7 @@ void Engine::updateUniformBuffer(uint32_t currentImage) {
 
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(-2.0f, -2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
 

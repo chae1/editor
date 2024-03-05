@@ -7,12 +7,12 @@ using namespace engine;
  
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS || action == GLFW_RELEASE) {
-        std::cout << "key " << key << ", action " << action << "\n";
+        std::cout << "key " << key << ", action " << action << std::endl;
     }
 }
 
 int main() {
-    Engine engine { 500, 400, "3edit", key_callback };
+    Engine engine { 500, 400, "3d-edit", key_callback };
     
     try {
         engine.run();
@@ -23,3 +23,4 @@ int main() {
 
     return EXIT_SUCCESS;
 }
+ 

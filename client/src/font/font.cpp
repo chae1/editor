@@ -47,7 +47,6 @@ void FontInfo::load_font(string str) {
 	
 	    string currline_token;
 	    line >> currline_token;
-	    // cout << fmt::format("{}\n", currline_token);
 
 	    if (currline_token == "glyph") {
 		line = get_newline(fin);	    
@@ -88,6 +87,10 @@ void FontInfo::load_font(string str) {
 	    } else if (currline_token == "line-height") {
 		line = get_newline(fin);
 		line >> line_height;
+		    
+	    } else if (currline_token == "em") {
+		line = get_newline(fin);
+		line >> em;
 		    
 	    } else if (currline_token == "font-info-end") {}
 	}
@@ -151,7 +154,7 @@ void GlyphInfo::generate_normalized_split_curves(int split_size) {
 	    }
 	}
     }
-    
+
     for (int i = 0; i < n; i++) {
 	sort(split_left_curves[i].begin(), split_left_curves[i].end(), [](const Curve& c1, const Curve& c2) { return min({ c1.p1.x, c1.p2.x, c1.p3.x }) < min({ c2.p1.x, c2.p2.x, c2.p3.x }); });
 
@@ -160,6 +163,10 @@ void GlyphInfo::generate_normalized_split_curves(int split_size) {
 	sort(split_up_curves[i].begin(), split_up_curves[i].end(), [](const Curve& c1, const Curve& c2) { return max({ c1.p1.y, c1.p2.y, c1.p3.y }) > max({ c2.p1.y, c2.p2.y, c2.p3.y }); });
 
 	sort(split_down_curves[i].begin(), split_down_curves[i].end(), [](const Curve& c1, const Curve& c2) { return min({ c1.p1.y, c1.p2.y, c1.p3.y }) < min({ c2.p1.y, c2.p2.y, c2.p3.y }); });
+    }
+
+    for (auto& curve : curves) {
+	normalized_curves.push_back(Curve{ { curve.p1.x/width, curve.p1.y/height }, { curve.p2.x/width, curve.p2.y/height }, { curve.p3.x/width, curve.p3.y/height } });
     }
 }
 
@@ -287,18 +294,46 @@ void FontInfo::generate_font_buffers() {
 	    memcpy(split_down_curve_buffer.data() + split_down_offset_buffer[i * split_size + j], down_curves.data(), sizeof(Curve) * down_curves.size());
 	}
     }
+
+    int offset = 0;
+    for (const auto& glyph_info : glyph_infos) {
+	const auto& curves = glyph_info.normalized_curves;
+
+	offset_buffer.push_back(offset);
+	offset += curves.size();
+	size_buffer.push_back(curves.size());
+	
+	for (const auto& curve : curves) {
+	    curve_buffer.push_back(curve);
+	}	
+    }
 }
 
 void FontInfo::print_font_buffers() {
-    int i = 0;
+    int i = 1;
     glyph_infos[i].render_box.print();
-    cout << fmt::format("\nglyph {}\nsplit_left\n", glyph_infos[i].glyph);
-    for (int j = 0; j < split_size; j++) {
-	int offset = split_left_offset_buffer[i * split_size + j];
-	int size = split_left_size_buffer[i * split_size + j];
-	cout << fmt::format("split {}, offset : {}, size : {}\n", j, offset, size);
-	for (int k = offset; k < offset + size; k++) {
-	    split_left_curve_buffer[k].print();
-	}	
-    }	    
+    // cout << fmt::format("\nglyph {}\nsplit_left\n", glyph_infos[i].glyph);
+    // for (int j = 0; j < split_size; j++) {
+    // 	int offset = split_left_offset_buffer[i * split_size + j];
+    // 	int size = split_left_size_buffer[i * split_size + j];
+    // 	cout << fmt::format("split {}, offset : {}, size : {}\n", j, offset, size);
+    // 	for (int k = offset; k < offset + size; k++) {
+    // 	    split_left_curve_buffer[k].print();
+    // 	}	
+    // }
+
+    fmt::print("\nglyph {}\n", glyph_infos[i].glyph);
+    int offset = offset_buffer[i];
+    int size = size_buffer[i];
+
+    for (int k = offset; k < offset + size; k++) {
+	curve_buffer[k].print();
+    }
+
+    fmt::print("{}\n", size_buffer);
+
+    fmt::print("\n");
+    for (size_t i = 0; i < glyph_infos.size(); i++) {
+	fmt::print("i {} glyph {}\n", i, glyph_infos[i].glyph);
+    }
 }

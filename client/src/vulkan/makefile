@@ -13,7 +13,7 @@ main: main.cpp
 	$(CC) $(CXXFLAGS) $< -o $@ $(INCLUDES) $(LIBRARIES) $(LFLAGS)
 
 engine_test: engine_test.cpp engine.cpp engine.h ../font/font.cpp ../font/font.h vert.spv frag.spv
-	$(CC) $(CXXFLAGS) -o $@ -g engine_test.cpp -g engine.cpp -g engine.h ../font/font.cpp $(LFLAGS)
+	$(CC) $(CXXFLAGS) -g -o $@ engine_test.cpp engine.cpp engine.h ../font/font.cpp $(LFLAGS)
 
 vert.spv: shader.vert
 	glslc shader.vert -o vert.spv

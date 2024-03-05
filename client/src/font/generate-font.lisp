@@ -12,48 +12,25 @@
 
 (defvar *char->name* (make-hash-table :test #'equal))
 
-(defun add-small-chars (list)
-  (mapcar #'(lambda (c) (setf (gethash c *char->name*) (concatenate 'string "small_" (coerce `(,c) 'string)))) list))
+(defparameter *small-chars* '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z))
 
-(defun add-big-chars (list)
-  (mapcar #'(lambda (c) (setf (gethash c *char->name*) (concatenate 'string "big_" (coerce `(,c) 'string)))) list))
+(defun add-small-chars ()
+  (mapc #'(lambda (c) (setf (gethash c *char->name*) (concatenate 'string "small_" (coerce `(,c) 'string)))) *small-chars*))
+
+(defparameter *big-chars* '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z))
+
+(defun add-big-chars ()
+  (mapc #'(lambda (c) (setf (gethash c *char->name*) (concatenate 'string "big_" (coerce `(,c) 'string)))) *big-chars*))
+
+(defun add-char-str (char-str)
+  (setf (gethash (car char-str) *char->name*) (cdr char-str)))
+
+(defparameter *other-chars* '((#\` . "backquote") (#\~ . "tilde") (#\! . "exclamation_mark") (#\@ . "ampersat") (#\# . "sharp") (#\$ . "dollar") (#\% . "percent") (#\^ . "caret") (#\& . "ampersand") (#\* . "asterisk") (#\( . "open_parenthesis") (#\) . "close_parenthesis") (#\- . "hyphen") (#\_ . "underscore") (#\+ . "plus") (#\= . "equal") (#\{ . "open_brace") (#\} . "close_brace") (#\[ . "open_bracket") (#\] . "close_bracket") (#\| . "pipe") (#\\ . "backslash") (#\; . "semicolon") (#\: . "colon") (#\' . "single_quote") (#\" . "quote") (#\, . "comma") (#\. . "period") (#\< . "less_than") (#\> . "greater_than") (#\? . "question_mark") (#\/ . "slash")))
 
 (defun init-map-char->name ()
-  (add-small-chars '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z))
-  (add-big-chars '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z))
-  (setf (gethash #\` *char->name*) "backquote")
-  (setf (gethash #\~ *char->name*) "tilde")
-  (setf (gethash #\! *char->name*) "exclamation_mark")
-  (setf (gethash #\@ *char->name*) "ampersat")
-  (setf (gethash #\# *char->name*) "sharp")
-  (setf (gethash #\$ *char->name*) "dollar")
-  (setf (gethash #\% *char->name*) "percent")
-  (setf (gethash #\^ *char->name*) "caret")
-  (setf (gethash #\& *char->name*) "ampersand")
-  (setf (gethash #\* *char->name*) "asterisk")
-  (setf (gethash #\( *char->name*) "open_parenthesis")
-  (setf (gethash #\) *char->name*) "close_parenthesis")
-  (setf (gethash #\- *char->name*) "hyphen")
-  (setf (gethash #\_ *char->name*) "underscore")
-  (setf (gethash #\+ *char->name*) "plus")
-  (setf (gethash #\= *char->name*) "equal")
-  (setf (gethash #\{ *char->name*) "open_brace")
-  (setf (gethash #\} *char->name*) "close_brace")
-  (setf (gethash #\[ *char->name*) "open_bracket")
-  (setf (gethash #\] *char->name*) "close_bracket")
-  (setf (gethash #\| *char->name*) "pipe")
-  (setf (gethash #\\ *char->name*) "backslash")
-  (setf (gethash #\; *char->name*) "semicolon")
-  (setf (gethash #\: *char->name*) "colon")
-  (setf (gethash #\' *char->name*) "single_quote")
-  (setf (gethash #\" *char->name*) "quote")
-  (setf (gethash #\, *char->name*) "comma")
-  (setf (gethash #\. *char->name*) "period")
-  (setf (gethash #\< *char->name*) "less_than")
-  (setf (gethash #\> *char->name*) "greater_than")
-  (setf (gethash #\? *char->name*) "question_mark")
-  (setf (gethash #\/ *char->name*) "slash")
-  nil)
+  (add-small-chars)
+  (add-big-chars)
+  (mapc #'add-char-str *other-chars*))
 
 (init-map-char->name)
 
@@ -101,7 +78,7 @@
       ;; (format t "~a~%" line-height)
       font-info!)))
 
-(defparameter *ubuntumono-r* (create-font-info! "/home/chaewon/Desktop/chae1/editor/client/src/font/ttf/UbuntuMono-R.ttf"))
+(defparameter *ubuntumono-r* (create-font-info! "/home/chaewon/Desktop/chae1/github/editor/client/src/font/ttf/UbuntuMono-R.ttf"))
 
 (defobjfun generate-font-info (font-info!)
   (flet ((generate-char-info (c file)
@@ -153,12 +130,12 @@
 				(format file "~,2f ~,2f~%" curr-x curr-y)
 				(setf point-state 3))))
 			 (cerror "first point is off curve" ""))))))
-	     
-             (format file "~%advance-width~%~,2f~%" (advance-width glyph))
+
+	     (format file "~%advance-width~%~,2f~%" (advance-width glyph))
 	     (format file "~%render-box x-min y-min x-max y-max~%~,2f ~,2f ~,2f ~,2f~%" (aref mono-render-box 0) (aref mono-render-box 1) (aref mono-render-box 2) (aref mono-render-box 3))
 	     (format file "~%glyph-info-end~%"))))
 
-    (let ((dir-path (concatenate 'string "/home/chaewon/Desktop/chae1/editor/client/src/font/" font-name "/")))
+    (let ((dir-path (concatenate 'string "/home/chaewon/Desktop/chae1/github/editor/client/src/font/" font-name "/")))
       (ensure-directories-exist dir-path)
       (loop for c in '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z #\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z #\` #\~ #\! #\@ #\# #\$ #\% #\^ #\& #\* #\( #\) #\- #\_ #\+ #\= #\{ #\} #\[ #\] #\| #\\ #\; #\: #\' #\" #\, #\. #\< #\> #\? #\/) do
         (let ((path (concatenate 'string (concatenate 'string dir-path (gethash c *char->name*)) ".txt")))
@@ -168,6 +145,7 @@
 	(with-open-file (file path :direction :output :if-exists :supersede :if-does-not-exist :create)
 	  (format file "font~%~a~%" font-name)
 	  (format file "~%ttf-path~%~,2f~%" font-path)
+	  (format file "~%em~%~,2f~%" (units/em font-loader))
           (format file "~%line-height~%~,2f~%" line-height)
 	  (format file "~%font-info-end~%"))))))
 

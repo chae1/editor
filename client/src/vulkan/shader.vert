@@ -19,6 +19,7 @@ struct StorageBufferObject {
 };
 
 layout(binding = 1) buffer StorageBuffer { StorageBufferObject ssbos[]; };
+// layout(binding = 14) buffer offsetBuffer { int Offsets[]; };
 
 layout(location = 0) out vec4 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
@@ -27,13 +28,17 @@ layout(location = 2) out int fragCharId;
 void main() {
     StorageBufferObject ssbo = ssbos[gl_InstanceIndex];
     gl_Position =  ubo.proj * ubo.view * ubo.model * inPos;
+    // gl_Position =  inPos;
+
     fragColor = ssbo.color;
     fragTexCoord = inTexCoord;
     fragCharId = ssbo.charId;
     
+    // debugPrintfEXT("offset %d\n", Offsets[4]);
+
     // debugPrintfEXT("\nvertex shader\n");
     // debugPrintfEXT("gl_VertexIndex %d\n", gl_VertexIndex);
-    // debugPrintfEXT("inPos %1.2v4f\n", inPos);
+    debugPrintfEXT("inPos %1.2v4f\n", inPos);
 
     // debugPrintfEXT("ubo.model0 %1.2v4f\n", ubo.model[0]);
     // debugPrintfEXT("ubo.model1 %1.2v4f\n", ubo.model[1]);

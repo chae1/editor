@@ -50,6 +50,8 @@ namespace font {
 	vector<vector<Curve>> split_right_curves;
 	vector<vector<Curve>> split_up_curves;
 	vector<vector<Curve>> split_down_curves;
+
+	vector<Curve> normalized_curves;
 	
 	void print() const;
     };
@@ -65,7 +67,8 @@ namespace font {
 
 	string name;
 	string ttf_path;
-	float line_height;	
+	float line_height;
+	float em;
 	unordered_map<char, int> glyph_index;
 	vector<GlyphInfo> glyph_infos;
 
@@ -88,6 +91,10 @@ namespace font {
 	vector<int> split_down_offset_buffer;
 	vector<int> split_down_size_buffer;
 	vector<Curve> split_down_curve_buffer;
+
+	vector<int> offset_buffer;
+	vector<int> size_buffer;
+	vector<Curve> curve_buffer;
 	
 	void print_font_buffers();
 
