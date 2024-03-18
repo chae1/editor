@@ -17,9 +17,15 @@
   `(not (eq ,a ,b)))
 
 (export 'while)
-(defmacro while (end-cond &body body)
+(defmacro while (cont-cond &body body)
   `(do nil
-    ((not ,end-cond) 1)
+    ((not ,cont-cond) nil)
+     ,@body))
+
+(export 'until)
+(defmacro until (end-cond &body body)
+  `(do nil
+    (,end-cond nil)
      ,@body))
 
 (export 'repeat)

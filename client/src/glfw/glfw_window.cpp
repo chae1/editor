@@ -8,6 +8,6 @@ void Glfw_window::set_key_callback(void (*func)(GLFWwindow* window, int key, int
 
 void Glfw_window::run_callback_loop() {
     while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
+        // glfwPollEvents();
     }
 }

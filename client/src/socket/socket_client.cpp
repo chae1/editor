@@ -1,14 +1,17 @@
 #include "socket_client.h"
-#include <netdb.h>
+#include <cerrno>
 #include <regex>
 #include <cstring>
-#include <unistd.h>
-#include <errno.h>
 #include <iostream>
+
+#include <errno.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 using namespace socket_client;
 
-Socket_client::Socket_client(const std::string& ip_port) {
+void Socket_client::init(const std::string& ip_port) {
     // Extract ip and port
     std::regex regex("([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}):([0-9]{1,5})");
     std::smatch match;
@@ -34,26 +37,85 @@ Socket_client::Socket_client(const std::string& ip_port) {
 	if (socket_fd == -1)
 	    continue;
 
+	// Set socket to non-blocking mode
+	// int flags = fcntl(socket_fd, F_GETFL, 0);
+	// if (flags == -1) {
+        //     throw std::runtime_error("Error getting socket flags\n");
+	// }
+	// if (fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        //     throw std::runtime_error("Error setting socket to non-blocking mode\n");
+	// }
+	
 	if (connect(socket_fd, rp->ai_addr, rp->ai_addrlen) != -1) {
 	    connect_succeed = true;
 	    break; 
 	}
-	
+
+	// Wait for connection to complete
+	if (errno == EINPROGRESS) {
+            fd_set writefds;
+            FD_ZERO(&writefds);
+            FD_SET(socket_fd, &writefds);
+        
+            if (select(socket_fd + 1, NULL, &writefds, NULL, NULL) < 0) {
+		std::runtime_error("Error in select\n");
+            }
+
+            if (FD_ISSET(socket_fd, &writefds)) {
+		int so_error;
+		socklen_t len = sizeof so_error;
+		getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &so_error, &len);
+		if (so_error != 0) {
+                    std::runtime_error("Error connecting to server\n");
+		}
+
+		connect_succeed = true;
+		break; 
+            }
+	}
+
 	close (socket_fd);
     }
-
+    
     freeaddrinfo(res);
 
     if (!connect_succeed)
 	throw std::runtime_error("connect failed");
 }
 
+Socket_client::Socket_client(const std::string& ip_port) {
+    init(ip_port);
+}
+
 Socket_client::~Socket_client() {
     close(socket_fd);
 }
 
-void Socket_client::write_msg(const char *msg) {
+void Socket_client::send_msg(const char *msg) {
     int ret = send(socket_fd, msg, strlen(msg), 0);
+    if (ret == -1) {
+        std::cout << "errno = " << errno << "\n";
+        throw std::runtime_error("send failed");
+    }
+
+    ret = send(socket_fd, "\n", strlen("\n"), 0);
+    if (ret == -1) {
+        std::cout << "errno = " << errno << "\n";
+        throw std::runtime_error("send failed");
+    }
+    
+    std::cout << "write msg : " << msg << std::endl;
+}
+
+void Socket_client::send_msg(const std::string& msg) {
+    const char* msg_buf = msg.c_str();
+    int ret = send(socket_fd, msg_buf, strlen(msg_buf), 0);
+    if (ret == -1) {
+        std::cout << "errno = " << errno << "\n";
+        throw std::runtime_error("send failed");
+    }
+
+    ret = send(socket_fd, "\n", strlen("\n"), 0);
     if (ret == -1) {
         std::cout << "errno = " << errno << "\n";
         throw std::runtime_error("send failed");
@@ -67,7 +129,8 @@ void Socket_client::read_msg() {
     memset(buf, 0, sizeof(buf));
     size_t buf_end = 0;
     
-    while (!newline_visited) {
+    while (!newline_visited || buf_end == 0) {
+	newline_visited = false;
 	if (temp_buf_unread_begin == temp_buf_unread_end) {
 	    memset(temp_buf, 0, sizeof(temp_buf));
 	    int ret = recv(socket_fd, temp_buf, sizeof(temp_buf), 0);
@@ -80,17 +143,24 @@ void Socket_client::read_msg() {
 	    temp_buf_unread_end = ret;
 	}
 
-	size_t i = temp_buf_unread_begin;
-	for (; i < temp_buf_unread_end; i++) {
+	for (size_t i = temp_buf_unread_begin; i < temp_buf_unread_end; i++) {
 	    char c = temp_buf[i];
 	    if (c == '\n') {
-		int copy_len = i - temp_buf_unread_begin; // copy before \n
-		if (buf_end + copy_len >= bufsize) { // leave space for '\0'
+		// copy before \n
+		int copy_len = i - temp_buf_unread_begin;
+		if (copy_len == 0) {
+		    temp_buf_unread_begin = i + 1;
+		    continue;
+		}
+		// leave space for '\0'
+		if (buf_end + copy_len >= bufsize) {
+		    std::cout << "1 " << buf_end << " " << copy_len << " " << bufsize << std::endl;
 		    throw std::runtime_error("error msg greater than bufsize");
 		}
 		
 		memcpy(buf + buf_end, temp_buf + temp_buf_unread_begin, copy_len);
-		buf[buf_end + copy_len] = '\0';
+		buf_end += copy_len;
+		buf[buf_end] = '\0';
 		temp_buf_unread_begin = i + 1;
 		newline_visited = true;
 		break;
@@ -99,7 +169,10 @@ void Socket_client::read_msg() {
 	
 	if (!newline_visited) {
 	    int copy_len = temp_buf_unread_end - temp_buf_unread_begin;
-	    if (buf_end + copy_len >= bufsize) { // leave space for '\0'
+	    // leave space for '\0'
+	    if (buf_end + copy_len >= bufsize) {
+		std::cout << "2 " << buf_end << " " << copy_len << " " << bufsize << std::endl;
+
 		throw std::runtime_error("error msg greater than bufsize");
 	    }
 		
@@ -110,4 +183,20 @@ void Socket_client::read_msg() {
     }
     
     std::cout << "read msg : " << buf << std::endl;
+}
+
+bool Socket_client::recv_msg() {
+    int flags = MSG_DONTWAIT;
+    int ret = recv(socket_fd, buf, sizeof(buf), 0); 
+    if (ret == -1) {
+	if (errno == EAGAIN || errno == EWOULDBLOCK) {
+	    return false;
+	}
+
+	throw std::runtime_error("recv failed");
+    }
+    
+    std::cout << "recv returned : " << ret << std::endl;
+    std::cout << buf << std::endl;
+    return true;
 }

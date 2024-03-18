@@ -1,0 +1,115 @@
+;; -*- mode: emacs-lisp; lexical-binding:t; coding: utf-8-emacs; -*-
+;; --------------------------------------------------------------------------
+;; Desktop File for Emacs
+;; --------------------------------------------------------------------------
+;; Created Sun Mar 17 17:07:05 2024
+;; Desktop file format version 208
+;; Emacs version 29.1
+
+;; Global section:
+(setq desktop-saved-frameset [frameset 1 (26102 42153 11511 198000) (desktop . "208") "chaewon@chaewon-950XCJ-951XCJ-950XCR" nil nil ((((minibuffer . t) (undecorated) (override-redirect) (font . "-MS  -Consolas-regular-normal-normal-*-13-*-*-*-m-0-iso10646-1") (border-width . 0) (internal-border-width . 0) (child-frame-border-width) (right-divider-width . 0) (bottom-divider-width . 0) (vertical-scroll-bars . right) (horizontal-scroll-bars) (foreground-color . "#cfccd2") (background-color . "black") (mouse-color . "black") (border-color . "black") (screen-gamma) (line-spacing) (left-fringe . 8) (right-fringe . 8) (no-special-glyphs) (scroll-bar-foreground) (scroll-bar-background) (menu-bar-lines . 1) (tab-bar-lines . 0) (tool-bar-lines . 1) (title) (wait-for-wm . t) (tool-bar-position . top) (inhibit-double-buffering) (icon-type . t) (auto-raise) (auto-lower) (cursor-type . box) (scroll-bar-width . 16) (scroll-bar-height . 16) (alpha) (alpha-background) (no-focus-on-map) (no-accept-focus) (fullscreen . maximized) (visibility . t) (use-frame-synchronization) (skip-taskbar) (z-group) (font-parameter) (display-type . color) (background-mode . dark) (cursor-color . "#e1420b") (sticky) (shaded) (dnd-root-window-position) (last-focus-update) (frameset--id . "C373-CFC6-1D30-585F") (frameset--mini t) (height . 67) (width . 259) (modeline . t) (unsplittable) (left . 70) (top . 27) (icon-name) (display . ":1") (explicit-name)) ((min-height . 4) (min-width . 45) (min-height-ignore . 3) (min-width-ignore . 14) (min-height-safe . 1) (min-width-safe . 4) (min-pixel-height . 56) (min-pixel-width . 315) (min-pixel-height-ignore . 42) (min-pixel-width-ignore . 98) (min-pixel-height-safe . 14) (min-pixel-width-safe . 28)) hc (pixel-width . 1850) (pixel-height . 936) (total-width . 264) (total-height . 66) (normal-height . 1.0) (normal-width . 1.0) (combination-limit) (leaf (pixel-width . 245) (pixel-height . 936) (total-width . 35) (total-height . 66) (normal-height . 1.0) (normal-width . 0.13297297297297295) (parameters (window-side . left) (window-slot . 0)) (buffer " *Treemacs-Scoped-Buffer-#<frame new-server.lisp 0x5f411c7d28e0>*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated . t) (point . 197) (start . 1))) (leaf (last . t) (pixel-width . 1605) (pixel-height . 936) (total-width . 229) (total-height . 66) (normal-height . 1.0) (normal-width . 0.867027027027027) (buffer "new-my-text.lisp" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 17316) (start . 15513)) (prev-buffers ("new-server.lisp" 4670 5122)))) (((minibuffer . t) (undecorated) (override-redirect) (font . "-MS  -Consolas-regular-normal-normal-*-13-*-*-*-m-0-iso10646-1") (border-width . 0) (internal-border-width . 0) (child-frame-border-width) (right-divider-width . 0) (bottom-divider-width . 0) (vertical-scroll-bars . right) (horizontal-scroll-bars) (foreground-color . "#cfccd2") (background-color . "black") (mouse-color . "black") (border-color . "black") (screen-gamma) (line-spacing) (left-fringe . 8) (right-fringe . 8) (no-special-glyphs) (scroll-bar-foreground) (scroll-bar-background) (menu-bar-lines . 1) (tab-bar-lines . 0) (tool-bar-lines . 1) (title) (wait-for-wm . t) (tool-bar-position . top) (inhibit-double-buffering) (icon-type . t) (auto-raise) (auto-lower) (cursor-type . box) (scroll-bar-width . 16) (scroll-bar-height . 16) (alpha) (alpha-background) (no-focus-on-map) (no-accept-focus) (fullscreen . maximized) (visibility . t) (use-frame-synchronization) (skip-taskbar) (z-group) (font-parameter) (display-type . color) (background-mode . dark) (cursor-color . "#e1420b") (sticky) (shaded) (dnd-root-window-position) (last-focus-update) (frameset--id . "846F-17D4-C8F1-50AD") (frameset--mini t) (height . 67) (width . 259) (modeline . t) (unsplittable) (left . 70) (top . 27) (icon-name) (display . ":1") (explicit-name)) ((min-height . 4) (min-width . 55) (min-height-ignore . 3) (min-width-ignore . 21) (min-height-safe . 1) (min-width-safe . 6) (min-pixel-height . 56) (min-pixel-width . 385) (min-pixel-height-ignore . 42) (min-pixel-width-ignore . 147) (min-pixel-height-safe . 14) (min-pixel-width-safe . 42)) hc (pixel-width . 1850) (pixel-height . 936) (total-width . 264) (total-height . 66) (normal-height . 1.0) (normal-width . 1.0) (combination-limit) (leaf (pixel-width . 245) (pixel-height . 936) (total-width . 35) (total-height . 66) (normal-height . 1.0) (normal-width . 0.13297297297297295) (parameters (window-side . left) (window-slot . 0)) (buffer " *Treemacs-Scoped-Buffer-#<frame *slime-repl sbcl* 0x5f411e5da428>*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated . t) (point . 270) (start . 1))) (hc (last . t) (pixel-width . 1605) (pixel-height . 936) (total-width . 229) (total-height . 66) (normal-height . 1.0) (normal-width . 0.867027027027027) (combination-limit . t) (leaf (pixel-width . 800) (pixel-height . 936) (total-width . 114) (total-height . 66) (normal-height . 1.0) (normal-width . 0.5) (buffer "engine_test.cpp" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 1237) (start . 1)) (prev-buffers ("engine_test.cpp" 1 1197) ("*slime-repl sbcl*" 146240 146737))) (leaf (last . t) (pixel-width . 805) (pixel-height . 936) (total-width . 115) (total-height . 66) (normal-height . 1.0) (normal-width . 0.5) (buffer "*shell*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 1398459) (start . 1396083)) (next-buffers "multi-cursor-list.lisp" "*slime-inspector*" "*slime-repl sbcl*") (prev-buffers ("multi-cursor-list.lisp" 2594 3655) ("*slime-inspector*" 1 54) ("*slime-repl sbcl*" 666378 733002) ("*shell*" 1261257 1398459) ("engine_test.cpp" 1 1))))) (((minibuffer . t) (undecorated) (override-redirect) (font . "-MS  -Consolas-regular-normal-normal-*-13-*-*-*-m-0-iso10646-1") (border-width . 0) (internal-border-width . 0) (child-frame-border-width) (right-divider-width . 0) (bottom-divider-width . 0) (vertical-scroll-bars . right) (horizontal-scroll-bars) (foreground-color . "#cfccd2") (background-color . "black") (mouse-color . "black") (border-color . "black") (screen-gamma) (line-spacing) (left-fringe . 8) (right-fringe . 8) (no-special-glyphs) (scroll-bar-foreground) (scroll-bar-background) (menu-bar-lines . 1) (tab-bar-lines . 0) (tool-bar-lines . 1) (title) (wait-for-wm . t) (tool-bar-position . top) (inhibit-double-buffering) (icon-type . t) (auto-raise) (auto-lower) (cursor-type . box) (scroll-bar-width . 16) (scroll-bar-height . 16) (alpha) (alpha-background) (no-focus-on-map) (no-accept-focus) (fullscreen . maximized) (visibility . t) (use-frame-synchronization) (skip-taskbar) (z-group) (font-parameter) (display-type . color) (background-mode . dark) (cursor-color . "#e1420b") (sticky) (shaded) (dnd-root-window-position) (last-focus-update) (frameset--id . "E17F-85DC-B632-C133") (frameset--mini t) (height . 67) (width . 259) (modeline . t) (unsplittable) (left . 70) (top . 27) (icon-name) (display . ":1") (explicit-name)) ((min-height . 4) (min-width . 55) (min-height-ignore . 3) (min-width-ignore . 21) (min-height-safe . 1) (min-width-safe . 6) (min-pixel-height . 56) (min-pixel-width . 385) (min-pixel-height-ignore . 42) (min-pixel-width-ignore . 147) (min-pixel-height-safe . 14) (min-pixel-width-safe . 42)) hc (pixel-width . 1850) (pixel-height . 936) (total-width . 264) (total-height . 66) (normal-height . 1.0) (normal-width . 1.0) (combination-limit) (leaf (pixel-width . 245) (pixel-height . 936) (total-width . 35) (total-height . 66) (normal-height . 1.0) (normal-width . 0.13297297297297295) (parameters (window-side . left) (window-slot . 0)) (buffer " *Treemacs-Scoped-Buffer-#<frame doubly-linked-list-test.lisp 0x5f410d95f680>*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated . t) (point . 668) (start . 1))) (hc (last . t) (pixel-width . 1605) (pixel-height . 936) (total-width . 229) (total-height . 66) (normal-height . 1.0) (normal-width . 0.867027027027027) (combination-limit) (leaf (pixel-width . 800) (pixel-height . 936) (total-width . 114) (total-height . 66) (normal-height . 1.0) (normal-width . 0.5) (buffer "new-server.lisp" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 5135) (start . 3907)) (prev-buffers ("new-server.lisp" 3907 5135) ("doubly-linked-list-test.lisp" 1656 2031) ("*Completions*" 1 1) ("*EGLOT (editor/(c++-ts-mode c-mode c-ts-mode c++-mode)) events*" 11483 24330) ("*slime-compilation*" 1 73))) (leaf (last . t) (pixel-width . 805) (pixel-height . 936) (total-width . 115) (total-height . 66) (normal-height . 1.0) (normal-width . 0.5) (buffer "*slime-repl sbcl*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 758790) (start . 758790)) (next-buffers "*Help*") (prev-buffers ("*Help*" 1 1) ("*slime-repl sbcl*" 546545 619120) ("*slime-compilation*" 1 73) ("multi-cursor-list.lisp" 1 2019) ("init.el" 5282 5764) ("load.lisp" 1 555) ("*GNU Emacs*" 1 714) ("*scratch*" 1 146) ("*Messages*" 7679 8833) ("*Async-native-compile-log*" 1 933) ("*Warnings*" 1 89) ("*slime-events*" 1 1) ("*inferior-lisp*" 1 1125) ("multi-cursor-tree.lisp" 16223 17030) ("new-my-text.lisp" 14690 16311) ("*Completions*" 1 1) ("doubly-linked-list-test.lisp" 1656 2603))))) (((minibuffer . t) (undecorated) (override-redirect) (font . "-MS  -Consolas-regular-normal-normal-*-13-*-*-*-m-0-iso10646-1") (border-width . 0) (internal-border-width . 0) (child-frame-border-width) (right-divider-width . 0) (bottom-divider-width . 0) (vertical-scroll-bars . right) (horizontal-scroll-bars) (foreground-color . "#cfccd2") (background-color . "black") (mouse-color . "black") (border-color . "black") (screen-gamma) (line-spacing) (left-fringe . 8) (right-fringe . 8) (no-special-glyphs) (scroll-bar-foreground) (scroll-bar-background) (menu-bar-lines . 1) (tab-bar-lines . 0) (tool-bar-lines . 1) (title) (wait-for-wm . t) (tool-bar-position . top) (inhibit-double-buffering) (icon-type . t) (auto-raise) (auto-lower) (cursor-type . box) (scroll-bar-width . 16) (scroll-bar-height . 16) (alpha) (alpha-background) (no-focus-on-map) (no-accept-focus) (fullscreen) (visibility . t) (use-frame-synchronization) (skip-taskbar) (z-group) (font-parameter) (display-type . color) (background-mode . dark) (cursor-color . "#e1420b") (sticky) (shaded) (dnd-root-window-position) (last-focus-update) (frameset--id . "A45B-95EE-7AD4-45A7") (frameset--mini t) (height . 46) (width . 102) (modeline . t) (unsplittable) (left . 802) (top . 165) (icon-name) (display . ":1") (explicit-name)) ((min-height . 4) (min-width . 10) (min-height-ignore . 3) (min-width-ignore . 7) (min-height-safe . 1) (min-width-safe . 2) (min-pixel-height . 56) (min-pixel-width . 70) (min-pixel-height-ignore . 42) (min-pixel-width-ignore . 49) (min-pixel-height-safe . 14) (min-pixel-width-safe . 14)) leaf (pixel-width . 746) (pixel-height . 630) (total-width . 106) (total-height . 45) (normal-height . 1.0) (normal-width . 1.0) (buffer "init.el" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 5477) (start . 5296)) (prev-buffers ("load.lisp" 1 556))) (((minibuffer . t) (undecorated) (override-redirect) (font . "-MS  -Consolas-regular-normal-normal-*-13-*-*-*-m-0-iso10646-1") (border-width . 0) (internal-border-width . 0) (child-frame-border-width) (right-divider-width . 0) (bottom-divider-width . 0) (vertical-scroll-bars . right) (horizontal-scroll-bars) (foreground-color . "#cfccd2") (background-color . "black") (mouse-color . "black") (border-color . "black") (screen-gamma) (line-spacing) (left-fringe . 8) (right-fringe . 8) (no-special-glyphs) (scroll-bar-foreground) (scroll-bar-background) (menu-bar-lines . 1) (tab-bar-lines . 0) (tool-bar-lines . 1) (title) (wait-for-wm . t) (tool-bar-position . top) (inhibit-double-buffering) (icon-type . t) (auto-raise) (auto-lower) (cursor-type . box) (scroll-bar-width . 16) (scroll-bar-height . 16) (alpha) (alpha-background) (no-focus-on-map) (no-accept-focus) (fullscreen . maximized) (visibility . t) (use-frame-synchronization) (skip-taskbar) (z-group) (display-type . color) (background-mode . dark) (cursor-color . "#e1420b") (font-parameter) (sticky) (shaded) (environment) (dnd-root-window-position) (last-focus-update . t) (frameset--id . "3D24-DEA5-71F6-559E") (frameset--mini t . t) (height . 67) (width . 259) (modeline . t) (unsplittable) (left . 70) (top . 27) (icon-name) (display . ":1") (explicit-name)) ((min-height . 4) (min-width . 60) (min-height-ignore . 3) (min-width-ignore . 21) (min-height-safe . 1) (min-width-safe . 6) (min-pixel-height . 56) (min-pixel-width . 420) (min-pixel-height-ignore . 42) (min-pixel-width-ignore . 147) (min-pixel-height-safe . 14) (min-pixel-width-safe . 42)) hc (pixel-width . 1850) (pixel-height . 933) (total-width . 264) (total-height . 66) (normal-height . 1.0) (normal-width . 1.0) (combination-limit) (leaf (pixel-width . 280) (pixel-height . 933) (total-width . 40) (total-height . 66) (normal-height . 1.0) (normal-width . 0.14972972972972975) (parameters (window-side . left) (window-slot . 0)) (buffer " *Treemacs-Scoped-Buffer-#<frame *GNU Emacs* - GNU Emacs at chaewon-950XCJ-951XCJ-950XCR 0x5f410ca0fcb8>*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated . t) (point . 127) (start . 1))) (hc (last . t) (pixel-width . 1570) (pixel-height . 933) (total-width . 224) (total-height . 66) (normal-height . 1.0) (normal-width . 0.8502702702702702) (combination-limit . t) (leaf (pixel-width . 786) (pixel-height . 933) (total-width . 112) (total-height . 66) (normal-height . 1.0) (normal-width . 0.5) (buffer "multi-cursor-list.lisp" (selected . t) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 5784) (start . 5679)) (prev-buffers ("multi-cursor-tree.lisp" 12049 12636) ("multi-cursor-list.lisp" 2545 3744) ("new-my-text.lisp" 6424 7594) ("doubly-linked-list-test.lisp" 366 1633) ("load.lisp" 1 555) ("*GNU Emacs*" 1 714) ("*scratch*" 1 146))) (leaf (last . t) (pixel-width . 784) (pixel-height . 933) (total-width . 112) (total-height . 66) (normal-height . 1.0) (normal-width . 0.5) (buffer "*Help*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 1) (start . 1)) (prev-buffers ("*slime-repl sbcl*" 144859 146661) ("*Completions*" 1 1) ("multi-cursor-list.lisp" 1506 2544) ("*Help*" 1 1) ("*inferior-lisp*" 1 1125))))))])
+(setq desktop-missing-file-warning nil)
+(setq tags-file-name nil)
+(setq tags-table-list nil)
+(setq search-ring '(#("delete-data-before-cursor" 0 25 (isearch-case-fold-search t isearch-regexp-function nil)) #("get-te" 0 6 (isearch-case-fold-search t isearch-regexp-function nil)) #("insert-ch" 0 9 (isearch-case-fold-search t isearch-regexp-function nil)) #("print" 0 5 (isearch-case-fold-search t isearch-regexp-function nil))))
+(setq regexp-search-ring nil)
+(setq register-alist nil)
+(setq file-name-history '("~/Desktop/chae1/github/editor/server/src/"))
+
+;; Buffer section -- buffers listed in same order as in buffer list:
+(desktop-create-buffer 208
+  "/home/chaewon/Desktop/chae1/github/editor/server/src/multi-cursor-list.lisp"
+  "multi-cursor-list.lisp"
+  'lisp-mode
+  '(idle-highlight-mode font-lock-mode eldoc-mode slime-autodoc-mode slime-trace-dialog-minor-mode slime-mode)
+  5784
+  '(3678 nil)
+  nil
+  nil
+  '((buffer-display-time 26102 42150 652533 47000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (3666 3655 2497 2486 2373 2246 2223 2596 2596 2596 2596 2596 6290 621 621 5784))))
+
+(desktop-create-buffer 208
+  "/home/chaewon/Desktop/chae1/github/editor/server/src/new-my-text.lisp"
+  "new-my-text.lisp"
+  'lisp-mode
+  '(font-lock-mode eldoc-mode slime-autodoc-mode slime-trace-dialog-minor-mode slime-mode)
+  17316
+  '(17316 nil)
+  nil
+  nil
+  '((buffer-display-time 26102 39363 688836 447000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (17316 17315 17387 17353 17387 16333 16321 16487 16333 16321 16663 16672 16364 7272 17316 17316))))
+
+(desktop-create-buffer 208
+  "/home/chaewon/Desktop/chae1/github/editor/server/src/multi-cursor-tree.lisp"
+  "multi-cursor-tree.lisp"
+  'lisp-mode
+  '(font-lock-mode eldoc-mode slime-autodoc-mode slime-trace-dialog-minor-mode slime-mode)
+  12636
+  '(12345 nil)
+  nil
+  nil
+  '((buffer-display-time 26102 39052 199818 544000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (12354 17030))))
+
+(desktop-create-buffer 208
+  "/home/chaewon/Desktop/chae1/github/editor/client/src/vulkan/engine_test.cpp"
+  "engine_test.cpp"
+  'c++-ts-mode
+  '(eglot-inlay-hints-mode eldoc-mode flymake-mode eglot--managed-mode font-lock-mode)
+  1237
+  '(728 nil)
+  nil
+  nil
+  '((buffer-display-time 26102 38341 487475 991000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (1197 1237))))
+
+(desktop-create-buffer 208
+  "/home/chaewon/Desktop/chae1/github/editor/server/new-server.lisp"
+  "new-server.lisp"
+  'lisp-mode
+  '(idle-highlight-mode font-lock-mode eldoc-mode slime-autodoc-mode slime-trace-dialog-minor-mode slime-mode)
+  5135
+  '(5391 nil)
+  nil
+  nil
+  '((buffer-display-time 26102 38857 307963 851000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (5273 5379 5306 5139 5220 5206 5206 5222 5159 3741 5304 5300 5280 5237 5305 5135))))
+
+(desktop-create-buffer 208
+  "/home/chaewon/Desktop/chae1/github/editor/server/test/doubly-linked-list-test.lisp"
+  "doubly-linked-list-test.lisp"
+  'lisp-mode
+  '(font-lock-mode eldoc-mode slime-autodoc-mode slime-trace-dialog-minor-mode slime-mode)
+  1633
+  '(2509 nil)
+  nil
+  nil
+  '((buffer-display-time 26102 37794 410308 809000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (2581 2449 1880 2106 2055 2010 2344 1974 1880 1745 2376 2138 2137 2041 1745 2603))))
+
+(desktop-create-buffer 208
+  "/home/chaewon/.emacs.d/init.el"
+  "init.el"
+  'emacs-lisp-mode
+  '(font-lock-mode eldoc-mode)
+  5477
+  '(5765 nil)
+  nil
+  nil
+  '((buffer-display-time 26102 35737 929248 971000) (buffer-file-coding-system . prefer-utf-8-unix))
+  '((mark-ring (5477 5765 5503 5765 5505 5519 5503 5488 5477 6928 6131 5489 5515 5503 5997 5764))))
+
+(desktop-create-buffer 208
+  "/home/chaewon/Desktop/chae1/github/editor/server/load.lisp"
+  "load.lisp"
+  'lisp-mode
+  '(font-lock-mode eldoc-mode slime-autodoc-mode slime-trace-dialog-minor-mode slime-mode)
+  555
+  '(559 nil)
+  nil
+  nil
+  '((buffer-display-time 26102 34070 316466 161000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (936 552 501 936 936))))
+

@@ -4,24 +4,22 @@
 
 (in-package :my-text)
 
-;; text editing
+"
+text : list
+  line-manager ^user0
+    line : list
+      c1
+      c2 ^user0
+      ..
+  line-manager
+    line : list
+      c1
+      c2
+      ..
 
-
-;; text : list
-;;   line-manager ^user0
-;;     line : list
-;;       c1
-;;       c2 ^user0
-;;       ..
-;;   line-manager
-;;     line : list
-;;       c1
-;;       c2
-;;       ..
-
-;; "chaewon -> ((tc,            (tc,         ..
-;;               (lc lc lc ..))  (lc lc ..))  ..)"
-
+chaewon -> ((tc,            (tc,         ..
+              (lc lc lc ..))  (lc lc ..))  ..)
+"
 
 ;; line-manager!
 
@@ -352,24 +350,3 @@
       (if (eq (my-list:index-of line-cursor!) 0)
 	  (delete-new-line-before-cursor text-manager! cursor!)
 	  (delete-char-before-cursor text-manager! cursor!)))))
-
-"
-
-text : list
-  line-manager ^user0
-    line : list
-      c1
-      c2 ^user0
-      ..
-  line-manager
-    line : list
-      c1
-      c2
-      ..
-
-chaewon -> ((tc,            (tc,         ..
-              (lc lc lc ..))  (lc lc ..))  ..)
-
-"
-
-nil

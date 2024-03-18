@@ -27,10 +27,12 @@
 #include <glm/gtx/hash.hpp>
 
 #include "../font/font.h"
+#include "../socket/socket_client.h"
 
 using namespace font;
+using namespace socket_client;
 
-namespace engine {
+namespace vk_engine {
 
     #define NDEBUG
 
@@ -91,13 +93,14 @@ namespace engine {
     class Engine {
     public:
 	Engine() = delete;
-	Engine(int width, int height, const char* title, void (*func)(GLFWwindow* window, int key, int scancode, int action, int mods)) {
+	Engine(int width, int height, const char* title, void (*key_callback)(GLFWwindow* window, int key, int scancode, int action, int mods), void (*socket_listener)()) {
 	    glfwInit();
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             window = glfwCreateWindow(width, height, title, nullptr, nullptr);
             glfwSetWindowUserPointer(window, this);
             glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-	    glfwSetKeyCallback(window, func);
+	    glfwSetKeyCallback(window, key_callback);
+	    this->socket_listener = socket_listener;
 	}
 	
 	~Engine() {
@@ -111,11 +114,19 @@ namespace engine {
 	    main_loop();
 	    clean_up();
 	}
-	
-    private:
-	FontInfo fontInfo;
+
+	Socket_client client;
 	
 	GLFWwindow* window;
+	
+	int ssboCount = 1;
+	VkBuffer storageBuffer;
+	VkDeviceMemory storageBufferMemory;
+	void* storageBufferMapped;
+	
+    private:
+	void (*socket_listener)();
+	FontInfo fontInfo;
 
 	VkInstance instance;
 	VkSurfaceKHR surface;
@@ -174,11 +185,6 @@ namespace engine {
 	std::vector<VkDeviceMemory> uniformBuffersMemory;
 	std::vector<void*> uniformBuffersMapped;
 	
-	int ssboCount = 1;
-	VkBuffer storageBuffer;
-	VkDeviceMemory storageBufferMemory;
-	void* storageBufferMapped;
-	
 	std::vector<VkBuffer> glyphBuffers;
 	std::vector<VkDeviceMemory> glyphBuffersMemory;
 	std::vector<uint32_t> glyphBuffersElementSize;
@@ -233,13 +239,10 @@ namespace engine {
 	    createGraphicsPipeline();
 
 	    createSyncObjects();
-	    // draw
 	}
 	
 	void main_loop() {
-	    // std::thread { [&] {
-		
-	    // } }.detach();
+	    std::thread { socket_listener }.detach();
 	    
 	    while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();

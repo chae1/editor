@@ -16,14 +16,15 @@ int main(int argc, char* argv[]) {
 	Socket_client client { ip_port };
 	
         auto username = argv[2];
-        client.write_msg(username);
-        client.write_msg("\n");
+        client.send_msg(username);
+        client.send_msg("\n");
 
-        client.write_msg("hi from client.\n");
-        client.write_msg("hi from client.\n");
+        client.send_msg("hi from client.");
+        client.send_msg("hi from client.\n");
 
-        client.read_msg();
-	std::cout << client.buf << std::endl;
+	while (1) {
+            client.recv_msg();
+	}	
     }
 
     catch (const std::exception& e) {

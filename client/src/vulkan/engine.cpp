@@ -6,10 +6,10 @@
 #include <string>
 #include <algorithm>
 
-using namespace engine;
+using namespace vk_engine;
 
 void Engine::init_font() {
-    fontInfo.load_font("/home/chaewon/Desktop/chae1/github/editor/client/src/font/UbuntuMono-R/");
+    fontInfo.load_font("/home/chaewon/Desktop/chae1/github/editor/font/txt/UbuntuMono-R/");
     fontInfo.generate_font_buffers();
     fontInfo.print_font_buffers();
 }
@@ -892,7 +892,7 @@ void Engine::createStorageBuffer() {
     ssbo.view = glm::mat4(1.0f);
     ssbo.proj = glm::mat4(1.0f);
     ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    ssbo.charId = 54;
+    ssbo.charId = 67;
     
     objs[0] = ssbo;
     
@@ -1271,6 +1271,10 @@ void Engine::recreateSwapChain() {
         glfwGetFramebufferSize(window, &width, &height);
     }
 
+    client.send_msg("resize-window");
+    client.send_msg(to_string(width));
+    client.send_msg(to_string(height));
+
     vkDeviceWaitIdle(device);
     cleanupSwapChain();
     createSwapChain();
@@ -1337,28 +1341,28 @@ void Engine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIn
     }
 }
 
-void Engine::updateUniformBuffer(uint32_t currentImage) {
+void Engine::updateUniformBuffer(uint32_t currentFrame) {
     static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(-2.0f, -2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), 0.1f * time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(-2.0f, -2.0f + 0.1f * time, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
 
-    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 }
 
 void Engine::drawFrame() {
-    // fmt::print("currentFrame {}\n", currentFrame);
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-
+    
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-
+    // fmt::print("acquire image result {}\n", result);
+    
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreateSwapChain();
         return;
@@ -1403,7 +1407,8 @@ void Engine::drawFrame() {
     presentInfo.pResults = nullptr;
 
     result = vkQueuePresentKHR(presentQueue, &presentInfo);
-
+    // fmt::print("queue present result {}\n", result);
+    
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = false;
         recreateSwapChain();

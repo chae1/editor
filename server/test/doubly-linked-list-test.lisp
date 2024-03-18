@@ -65,7 +65,47 @@
 	      (print (get-data c))))
 	   )
 	 )
-       
-       
+    
+       )))
 
+
+(defmacro test2 ()
+  `(progn
+     (defparameter *l* (create-multi-cursor-list!))
+     (let ((cursor (create-cursor! *l* 0)))
+
+       (let ((i 1))
+	 (defun insert-num ()
+	   (incf i)
+	   (insert-data-after-cursor *l* cursor i)))
+
+       (push-cursor! *l* cursor)
+
+       (dotimes (m 5)
+         (insert-num))
+
+       (push-cursor! *l* (create-cursor! *l* 0))
+
+       (dotimes (m 5)
+         (insert-num))
+
+       (dotimes (m 3)
+         (delete-data-before-cursor *l* cursor))
+
+       (move-cursor-to-next *l* cursor)
+       (move-cursor-to-next *l* cursor)
+       (move-cursor-to-next *l* cursor)
+
+       (dotimes (m 5)
+         (insert-num))
+
+       (repeat 5 (move-cursor-to-prev *l* cursor))
+       (print *l*)
+       (terpri)
+       
+       (objlet* ((new-l (split-list-after-cursor *l* cursor)))
+	 (print *l*)
+	 (print new-l)
+	 )
+       nil
        )))

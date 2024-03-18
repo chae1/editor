@@ -205,13 +205,13 @@
 	     (progn
 	       (format t "(run-msg-handler) close connect~%")
 	       (sb-bsd-sockets:socket-close connect)
-	       (remove-el userinfo! userinfos)
-	       (remove-cursors-manager! text-manager username)
+	       ;; (remove-el userinfo! userinfos)
+	       ;; (remove-cursors-manager! text-manager username)
 	       (format t "(run-msg-handler) exiting msg-handler~%")))))))
 
 (objlet* ((text-server! nil))
-  (defobjfun run-text-server! (&optional (ip-ext #(127 0 0 1)) (port-ext 20741))
-    (setq text-server! (make-text-server! :ip ip-ext :port port-ext))
+  (defobjfun run-text-server! (&optional (ip-in #(127 0 0 1)) (port-in 20741))
+    (setq text-server! (make-text-server! :ip ip-in :port port-in))
     (init-text text-manager "temp path")
     (setf server
 	  (sb-thread:make-thread
@@ -229,7 +229,7 @@
 			  (let ((connect (sb-bsd-sockets:socket-accept socket)))
 			    (when connect
 			      (format t "new connect~%")
-			      (objlet* ((userinfo! (make-userinfo! :connect connect :stream (sb-bsd-sockets:socket-make-stream connect :input t))))
+			      (objlet* ((userinfo! (make-userinfo! :connect connect :stream (sb-bsd-sockets:socket-make-stream connect :input t :output t))))
 				(run-msg-handler text-server! userinfo!))))))
 		    
 		    (sb-bsd-sockets:bad-file-descriptor-error (o) (format t "(run-text-server!) ~a~%" o))

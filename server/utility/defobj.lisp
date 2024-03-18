@@ -53,6 +53,11 @@
          (len (length obj-name))
          (binding-pairs '())
          (bound-objs '()))
+
+    ;; push obj binding
+    (push (cons obj-name obj) binding-pairs)
+    (push obj bound-objs)
+    
     (block find-match
       (do ((width len (- width 1)))
           ((< width 1))
@@ -65,9 +70,6 @@
                 (let ((bound-obj obj)
                       (prefix (subseq obj-name 0 i))
                       (postfix (subseq obj-name j len)))
-                  ;; push obj binding
-                  (push (cons obj-name bound-obj) binding-pairs)
-                  (push bound-obj bound-objs)
                   ;; push obj nickname (prefix or postfix) binding
                   (cond
 		    ;; prefix
@@ -155,7 +157,6 @@
                                             defobjmacro
                                             objmacrolet
                                             objlambda)))
-
                             (macroexpand-1 form)
                             (mapcar #'modify-form form))))
         ((and (symbolp form) (not (keywordp form)))
@@ -182,7 +183,7 @@
     ;; (format t "~%defobjfun bound-objs : ~%~s~%" *bound-objs*)
     `(progn
        (export (quote ,fun))
-       (defun ,fun ,(modify-form objs) ,@(modify-form body)))))
+       (defun ,fun ,objs ,@(modify-form body)))))
 
 (export 'objlet*)
 (defmacro objlet* (bindings &body body)
@@ -192,7 +193,7 @@
         (let ((new-binding '()))
           (push (modify-form (cadr binding)) new-binding)
           (add-obj-bindings (car binding))
-          (push (modify-form (car binding)) new-binding)
+          (push (car binding) new-binding)
           (push new-binding new-bindings)))
       (setq new-bindings (nreverse new-bindings))
       ;; (format t "~%objlet* binding-pairs : ~%~s~%" *binding-pairs*)
