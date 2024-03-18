@@ -1,7 +1,7 @@
 # editor
 
-Expecting features :
-* simultaneous text editing (by multiple users)
+Features :
+* simultaneous text editing by multiple users
 * vulkan gpu rendering
 
 * text rendering based on "Eric Lengyel, GPU-Centered Font Rendering Directly from Glyph Outlines, Journal of Computer Graphics Techniques (JCGT), vol. 6, no. 2, 31-47, 2017"
