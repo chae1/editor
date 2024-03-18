@@ -2,9 +2,9 @@
 Common lisp server and C++ client
 
 Features :
-* simultaneous text editing by multiple users via socket
-* vulkan gpu rendering
+* Simultaneous text editing by multiple users via socket
+* Vulkan gpu rendering
 
-* text rendering based on "Eric Lengyel, GPU-Centered Font Rendering Directly from Glyph Outlines, Journal of Computer Graphics Techniques (JCGT), vol. 6, no. 2, 31-47, 2017"
+* Text rendering based on "Eric Lengyel, GPU-Centered Font Rendering Directly from Glyph Outlines, Journal of Computer Graphics Techniques (JCGT), vol. 6, no. 2, 31-47, 2017"
   
 ![image](https://github.com/chae1/editor/assets/29856486/b82f3a33-1fa1-4c5d-ad58-74c307da10e3)
