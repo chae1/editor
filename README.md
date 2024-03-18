@@ -1,5 +1,5 @@
 # editor
-Common lisp server and C++ client
+Common lisp server and c++ client
 
 Features :
 * Simultaneous text editing by multiple users via socket
