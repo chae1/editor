@@ -1,57 +1,29 @@
 CC = g++
-CXXFLAGS = -std=c++17 -Wall -g
-VULKAN_INCLUDE = -I"c:/Users/kcwch/Desktop/bin/VulkanSDK/1.3.224.1/Include/" -I"c:/Users/kcwch/Desktop/bin/glfw-3.3.8.bin.WIN64/include/" -I"c:/Users/kcwch/Desktop/bin/glm/" -I"c:/Users/kcwch/Desktop/bin/stb/" -I"c:/Users/kcwch/Desktop/bin/tinyobjloader/" -L"C:\Users\kcwch\Desktop\bin\VulkanSDK\1.3.224.1\Lib" -L"C:\Users\kcwch\Desktop\bin\glfw-3.3.8.bin.WIN64\lib-mingw-w64" -lglfw3 -lvulkan-1
+CXXFLAGS = -std=c++2a -Wall
+INCLUDES =
+LIBRARIES =
+LFLAGS = 
 
-SRC_DIR = ./src
-SRC_NAMES = $(notdir $(SRCS))
-SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+FONT_DIR = ./src/font
+SOCKET_DIR = ./src/socket
+ENGINE_DIR = ./src/vulkan
 
-OBJ_DIR = ./obj
-OBJ_NAMES = $(SRC_NAMES:.cpp=.o)
-OBJS = $(patsubst %.o, $(OBJ_DIR)/%.o, $(OBJ_NAMES))
-DEPS = $(OBJS:.o=.d)
+all : client $(ENGINE_DIR)/vert.spv $(ENGINE_DIR)/frag.spv
 
-VULKAN_OBJ_NAMES = renderer.o
-VULKAN_OBJS = $(patsubst %.o, $(OBJ_DIR)/%.o, $(OBJ_NAMES))
+client : client.cpp $(FONT_DIR)/font.o $(SOCKET_DIR)/socket_client.o $(ENGINE_DIR)/engine.o
+	$(CC) $(CXXFLAGS) -g $< -o $@ $(FONT_DIR)/font.o $(SOCKET_DIR)/socket_client.o $(ENGINE_DIR)/engine.o -lglfw -lvulkan -lfmt
 
-OTHER_OBJS = $(filter-out $(VULKAN_OBJS), $(OBJS))
+$(FONT_DIR)/font.o : $(FONT_DIR)/font.cpp $(FONT_DIR)/font.h
+	$(CC) $(CXXFLAGS) -g -c $< -o $(FONT_DIR)/font.o -lfmt
 
-TARGET = client
-TARGET_SRC = $(TARGET).cpp
-TARGET_OBJ = $(OBJ_DIR)/$(TARGET).o
-TARGET_EXE = $(TARGET).exe
+$(SOCKET_DIR)/socket_client.o : $(SOCKET_DIR)/socket_client.cpp $(SOCKET_DIR)/socket_client.h
+	$(CC) $(CXXFLAGS) -g -c $< -o $(SOCKET_DIR)/socket_client.o -lfmt
 
-.PHONY: all test
-all: $(TARGET_EXE)
+$(ENGINE_DIR)/engine.o : $(ENGINE_DIR)/engine.cpp $(ENGINE_DIR)/engine.h
+	$(CC) $(CXXFLAGS) -g -c $< -o $(ENGINE_DIR)/engine.o -lglfw -lvulkan -lfmt
 
-$(TARGET_EXE): $(TARGET_OBJ) $(OBJS)
-	$(CC) $(CXXFLAGS) $^ -o $@
+$(ENGINE_DIR)/vert.spv : $(ENGINE_DIR)/shader.vert
+	glslc $(ENGINE_DIR)/shader.vert -o $(ENGINE_DIR)/vert.spv
 
-$(VULKAN_OBJS): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CC) $(CXXFLAGS) -c $^ -o $@ -MD $(VULKAN_INCLUDE)
-
-$(OTHER_OBJS): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CC) $(CXXFLAGS) -c $^ -o $@ -MD
-
--include $(DEPS)
-
-.PHONY: clean
-clean:
-	rm -f $(TARGET_EXE) $(OBJS) $(DEPS)
-
-TEST_DIR = ./test
-TEST_SRCS = $(wildcard $(TEST_DIR)/*.cpp)
-TEST_EXES = $(TEST_SRCS:.cpp=.exe)
-TEST_DEPS = $(TEST_SRCS:.cpp=.d)
-
-.PHONY: test
-test: $(TEST_EXES)
-
-$(TEST_DIR)/%.exe: $(TEST_DIR)/%.cpp
-	$(CC) $(CXXFLAGS) -o $@ -MD
-
--include $(TEST_DEPS)
-
-.PHONY: clean_test
-clean_test:
-	rm -f $(TEST_EXES) $(TEST_DEPS)
+$(ENGINE_DIR)/frag.spv : $(ENGINE_DIR)/shader.frag
+	glslc $(ENGINE_DIR)/shader.frag -o $(ENGINE_DIR)/frag.spv

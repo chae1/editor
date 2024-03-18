@@ -5,6 +5,7 @@
 #include <chrono>
 #include <string>
 #include <algorithm>
+#include <filesystem>
 
 using namespace vk_engine;
 
@@ -1050,7 +1051,8 @@ void Engine::updateDescriptorSets() {
 
 static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
+    fmt::print("current directory : {}\n", std::filesystem::current_path().string());
+    
     if (!file.is_open()) {
         throw std::runtime_error("failed to open file!");
     }
@@ -1081,8 +1083,8 @@ VkShaderModule Engine::createShaderModule(const std::vector<char>& code) {
 }
 
 void Engine::createGraphicsPipeline() {
-    auto vertShaderCode = readFile("vert.spv");
-    auto fragShaderCode = readFile("frag.spv");
+    auto vertShaderCode = readFile("./src/vulkan/vert.spv");
+    auto fragShaderCode = readFile("./src/vulkan/frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
