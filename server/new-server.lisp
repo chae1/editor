@@ -42,19 +42,42 @@
     (vector-push-extend #\Newline newline-buf)
     (send-msg connect newline-buf)))
 
+(defobjfun send-text (user! text!)
+  (send-msg connect (with-output-to-string (stream) (format stream "draw begin~%")))
+  (let ((msg (get-text user! text!)))
+    ;; (print msg)
+    ;; (print (length msg))
+    (send-msg connect msg))
+  (send-msg connect (with-output-to-string (stream) (format stream "draw end~%"))))
+
+(defobjfun send-max-size (user!)
+  (objlet* ((font! font)
+	    (x-advance (get-default-x-advance user!))
+	    (y-advance (get-y-advance user!))
+	    (max-cursor-num 100))
+    (send-msg connect (with-output-to-string (stream) (format stream "max-obj-num ~a~%" (+ max-cursor-num (ceiling (* (/ window-width x-advance) (/ window-height y-advance)))))))))
+
 (defparameter *user-info-table* (make-hash-table :test 'eq))
 
-(set-msg-handle "login" user! text! (username-in width-in height-in)
+(set-msg-handle "login" user! text! (username-in width-in height-in font-size-in)
   (setf state 'normal)
   (setf username username-in)
   (setf font (get-font "UbuntuMono-R"))
-  (setf font-size 10)
+  (setf font-size (read-from-string font-size-in))
   (setf window-width (float (read-from-string width-in)))
   (setf window-height (float (read-from-string height-in)))
   (setf cursor-color #(0.0 0.2 0.0))
   (link-user user! text!)
+
+  (format t "user login~%")
+  ;; (format t "width ~a height ~a received.~%" width height)
   (print user!)
-  (print (get-text user! text!)))
+
+  (send-max-size user!)
+  (send-text user! text!)
+  
+  ;; (print (get-text user! text!))
+  )
 
 (defun map-alist-to-table (alist table)
   (mapc (lambda (pair) (setf (gethash (car pair) table) (cdr pair)))
@@ -89,7 +112,7 @@
 (map-alist-to-table *extend-state-other-draw-key-alist* *extend-state-draw-key-table*)
 
 (set-msg-handle "key-event" user! text! (key action)
-  (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
+  ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
   (let ((key (read-from-string key))
 	(action (read-from-string action)))
     (case key
@@ -140,16 +163,12 @@
 			)))))
     (case action
       (1 (progn
-	   (send-msg connect (with-output-to-string (stream) (format stream "draw begin~%")))
-	   (let ((msg (get-text user! text!)))
-	     ;; (print msg)
-	     (send-msg connect msg))
-	   (send-msg connect (with-output-to-string (stream) (format stream "draw end~%")))
+	   (objdolist (user! user-list)
+	     (send-text user! text!))
 	   ;; (format t "------------------------------------------------~%")
 	   ;; (print line-tree)
 	   ;; (terpri)
 	   )))
-    
     )
   
   ;; (print cursor-list)
@@ -157,8 +176,13 @@
   
   (send-new-line connect))
 
-(set-msg-handle "resize-window" user! text! (width height)
-  (format t "width ~a height ~a received.~%" width height))
+(set-msg-handle "resize-window" user! text! (width-in height-in)
+  (let ((width (float (read-from-string width-in)))
+	(height (float (read-from-string height-in))))    
+    (setf window-width width)
+    (setf window-height height)
+    (send-max-size user!)
+    (send-text user! text!)))
 
 (defmacro my-thread (form exit-form &rest cases)
   `(sb-thread:make-thread
@@ -170,7 +194,10 @@
 	,exit-form))))
 
 (defobjfun handle-msg (init-msg user! text!)
-  (funcall (get-msg-handle init-msg) user! text!))
+  (let ((func (get-msg-handle init-msg)))
+    (if func
+	(funcall (get-msg-handle init-msg) user! text!)
+	(format t "handle for msg ~a not defined~%" init-msg))))
 
 (defobjfun handle-connect (connect socket-stream-in text!)
   (objlet* ((user! (make-user! :connect connect :socket-stream-in socket-stream-in)))
@@ -190,7 +217,8 @@
      ;; handler cases
      (end-of-file (o)
 		  ;; (format t "~a~%" o)
-		  ))))
+		  )
+     (sb-int:simple-stream-error (o)))))
 
 (defvar *socket* nil)
 (defvar *text* nil)

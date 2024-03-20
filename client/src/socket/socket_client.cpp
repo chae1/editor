@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <fmt/format.h>
+
 using namespace socket_client;
 
 void Socket_client::init(const std::string& ip_port) {
@@ -186,6 +188,7 @@ void Socket_client::read_msg() {
 }
 
 bool Socket_client::recv_msg() {
+    // set socket to non blocking mode before use
     int flags = MSG_DONTWAIT;
     int ret = recv(socket_fd, buf, sizeof(buf), 0); 
     if (ret == -1) {

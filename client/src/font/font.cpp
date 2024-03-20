@@ -312,15 +312,6 @@ void FontInfo::generate_font_buffers() {
 void FontInfo::print_font_buffers() {
     int i = 1;
     glyph_infos[i].render_box.print();
-    // cout << fmt::format("\nglyph {}\nsplit_left\n", glyph_infos[i].glyph);
-    // for (int j = 0; j < split_size; j++) {
-    // 	int offset = split_left_offset_buffer[i * split_size + j];
-    // 	int size = split_left_size_buffer[i * split_size + j];
-    // 	cout << fmt::format("split {}, offset : {}, size : {}\n", j, offset, size);
-    // 	for (int k = offset; k < offset + size; k++) {
-    // 	    split_left_curve_buffer[k].print();
-    // 	}	
-    // }
 
     fmt::print("\nglyph {}\n", glyph_infos[i].glyph);
     int offset = offset_buffer[i];
@@ -335,5 +326,11 @@ void FontInfo::print_font_buffers() {
     fmt::print("\n");
     for (size_t i = 0; i < glyph_infos.size(); i++) {
 	fmt::print("i {} glyph {}\n", i, glyph_infos[i].glyph);
+    }
+}
+
+void FontInfo::generate_glyph_map() {
+    for (size_t i = 0; i < glyph_infos.size(); i++) {
+	glyph_map[glyph_infos[i].glyph] = i;
     }
 }

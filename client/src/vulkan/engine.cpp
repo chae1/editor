@@ -1,4 +1,5 @@
 #include "engine.h"
+#include <GLFW/glfw3.h>
 #include <cstring>
 #include <vulkan/vulkan_core.h>
 #include <fstream>
@@ -13,6 +14,7 @@ void Engine::init_font() {
     fontInfo.load_font("/home/chaewon/Desktop/chae1/github/editor/font/txt/UbuntuMono-R/");
     fontInfo.generate_font_buffers();
     fontInfo.print_font_buffers();
+    fontInfo.generate_glyph_map();
 }
 
 bool checkValidationLayerSupport() {
@@ -874,30 +876,40 @@ void Engine::createUniformBuffers() {
 }
 
 void Engine::createStorageBuffer() {
-    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;
+    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * maxSsboCount;
     
     createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, storageBuffer, storageBufferMemory);
     vkMapMemory(device, storageBufferMemory, 0, bufferSize, 0, &storageBufferMapped);
+}
 
-    std::vector<StorageBufferObject> objs { static_cast<size_t>(ssboCount) };
-	
+void Engine::initStorageBuffer() {
+    objs.resize(static_cast<size_t>(ssboCount));
+    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;    
+    
     StorageBufferObject ssbo{};
-
-    // ssbo.model = glm::rotate(glm::mat4(1.0f), 0 * glm::radians(90.0f),
-    // 			     glm::vec3(0.0f, 0.0f, 1.0f));
-    // ssbo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    // ssbo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
-    // ssbo.proj[1][1] *= -1;
-
     ssbo.model = glm::mat4(1.0f);
     ssbo.view = glm::mat4(1.0f);
     ssbo.proj = glm::mat4(1.0f);
     ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    ssbo.charId = 67;
+    ssbo.charId = fontInfo.glyph_map['3'];
     
     objs[0] = ssbo;
-    
+
     memcpy(storageBufferMapped, objs.data(), bufferSize);
+}
+
+void Engine::updateStorageBuffer() {
+    ssboCount = objs.size();
+    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;    
+    memcpy(storageBufferMapped, objs.data(), bufferSize);
+}
+
+void Engine::recreateStorageBuffer() {
+    vkDeviceWaitIdle(device);
+    vkDestroyBuffer(device, storageBuffer, nullptr);
+    vkFreeMemory(device, storageBufferMemory, nullptr);
+    createStorageBuffer();
+    updateDescriptorSets();
 }
 
 void Engine::createGlyphBuffers() {
@@ -1029,7 +1041,7 @@ void Engine::updateDescriptorSets() {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 	std::vector<VkDescriptorBufferInfo> buffersInfo{
 	    { uniformBuffers[i], 0, sizeof(UniformBufferObject) },
-	    { storageBuffer, 0, sizeof(StorageBufferObject) * ssboCount }
+	    { storageBuffer, 0, sizeof(StorageBufferObject) * maxSsboCount }
 	};
 
 	for (size_t j = 0; j < glyphBuffers.size(); j++) {
@@ -1170,7 +1182,7 @@ void Engine::createGraphicsPipeline() {
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_TRUE;
     multisampling.rasterizationSamples = msaaSamples;
-    multisampling.minSampleShading = 0.2f;
+    multisampling.minSampleShading = 0.1f;
     multisampling.pSampleMask = nullptr;
     multisampling.alphaToCoverageEnable = VK_FALSE;
     multisampling.alphaToOneEnable = VK_FALSE;
@@ -1273,10 +1285,8 @@ void Engine::recreateSwapChain() {
         glfwGetFramebufferSize(window, &width, &height);
     }
 
-    client.send_msg("resize-window");
-    client.send_msg(to_string(width));
-    client.send_msg(to_string(height));
-
+    recreateSwapChainCallback();
+    
     vkDeviceWaitIdle(device);
     cleanupSwapChain();
     createSwapChain();
@@ -1350,8 +1360,8 @@ void Engine::updateUniformBuffer(uint32_t currentFrame) {
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), 0.1f * time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(-2.0f, -2.0f + 0.1f * time, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), 0.0001f * time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(-2.0f, -2.0f + 0.0001f * time, 2.0f), glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
     ubo.proj[1][1] *= -1;
 
@@ -1366,10 +1376,31 @@ void Engine::drawFrame() {
     // fmt::print("acquire image result {}\n", result);
     
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        recreateSwapChain();
+	if (mouseLeftButtonPressed) {
+            recreateSwapChain();
+	    framebufferResized = false;
+	}
+
+	fmt::print("swapchain out of date\n");
+
         return;
+
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+	fmt::print("aqcuireNextImage error : {}\n", result);
         throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    if (storageBufferRecreateFlag == true) {
+	fmt::print("recreate storage buffer\n");	
+	recreateStorageBuffer();
+	
+	storageBufferRecreateFlag = false;
+    } 
+
+    if (storageBufferUpdateFlag) {
+	updateStorageBuffer();
+	
+	storageBufferUpdateFlag = false;
     }
 
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
@@ -1412,16 +1443,16 @@ void Engine::drawFrame() {
     // fmt::print("queue present result {}\n", result);
     
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-        framebufferResized = false;
-        recreateSwapChain();
+	// if (mouseLeftButtonPressed) {
+        //     framebufferResized = false;
+        //     recreateSwapChain();
+	// }
+
+	fmt::print("queue present error\n");
+	
     } else if (result != VK_SUCCESS) {
         throw std::runtime_error("failed to present swap chain image!");
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}
-
-void Engine::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
-    auto app = reinterpret_cast<Engine*>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
 }

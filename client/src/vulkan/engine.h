@@ -25,6 +25,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include "../font/font.h"
 #include "../socket/socket_client.h"
@@ -93,14 +94,17 @@ namespace vk_engine {
     class Engine {
     public:
 	Engine() = delete;
-	Engine(int width, int height, const char* title, void (*key_callback)(GLFWwindow* window, int key, int scancode, int action, int mods), void (*socket_listener)()) {
+	Engine(int width, int height, const char* title, void (*key_callback)(GLFWwindow* window, int key, int scancode, int action, int mods), void (*framebufferResizeCallback)(GLFWwindow* window, int width, int height), void (*mouseButtonCallback)(GLFWwindow* window, int button, int action, int mode), void (*recreateSwapChainCallback)(), void (*socket_listener)()) {
 	    glfwInit();
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
             window = glfwCreateWindow(width, height, title, nullptr, nullptr);
             glfwSetWindowUserPointer(window, this);
             glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+	    glfwSetMouseButtonCallback(window, mouseButtonCallback);
 	    glfwSetKeyCallback(window, key_callback);
+
 	    this->socket_listener = socket_listener;
+	    this->recreateSwapChainCallback = recreateSwapChainCallback;
 	}
 	
 	~Engine() {
@@ -108,25 +112,73 @@ namespace vk_engine {
             glfwTerminate();
 	}
 
+	void init_font();
+	
+	void init_vulkan() {
+	    createInstance();
+	    createSurface();
+
+	    setupDebugMessenger();
+
+	    pickPhysicalDevice();
+	    createLogicalDevice();
+
+	    createSwapChain();
+	    createImageViews();
+	    
+	    createRenderPass();
+
+	    createColorResources();
+	    createDepthResources();	    
+	    createFramebuffers();
+	    
+	    createCommandPool();
+	    createCommandBuffers();
+
+	    createVertexBuffer();
+	    createIndexBuffer();
+
+	    createStorageBuffer();
+	    initStorageBuffer();
+	    
+	    createUniformBuffers();
+	    createGlyphBuffers();
+	    
+	    createDescriptorSetLayout();
+	    createDescriptorPool();
+	    allocateDescriptorSets();
+	    updateDescriptorSets();
+	    
+	    createGraphicsPipeline();
+	    createSyncObjects();
+	}
+	
 	void run() {
-	    init_font();
-	    init_vulkan();
 	    main_loop();
 	    clean_up();
 	}
 
-	Socket_client client;
+	void recreateStorageBuffer();
+	void updateStorageBuffer();
 	
+	Socket_client client;
+	FontInfo fontInfo;
+
 	GLFWwindow* window;
 	
+	int maxSsboCount = 1;
 	int ssboCount = 1;
-	VkBuffer storageBuffer;
-	VkDeviceMemory storageBufferMemory;
-	void* storageBufferMapped;
+	std::vector<StorageBufferObject> objs;
+	
+	bool framebufferResized = false;
+	bool mouseLeftButtonPressed = false;
+	bool storageBufferRecreateFlag = false;
+	bool storageBufferUpdateFlag = false;
 	
     private:
 	void (*socket_listener)();
-	FontInfo fontInfo;
+	void (*recreateSwapChainCallback)();
+	
 
 	VkInstance instance;
 	VkSurfaceKHR surface;
@@ -173,6 +225,10 @@ namespace vk_engine {
 
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
+	
+	VkBuffer storageBuffer;
+	VkDeviceMemory storageBufferMemory;
+	void* storageBufferMapped;
 
 	const std::vector<uint32_t> indices {
 	    0, 1, 3, 1, 2, 3
@@ -199,50 +255,9 @@ namespace vk_engine {
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
 	uint32_t currentFrame = 0;
-	bool framebufferResized = false;
-	
-	void init_font();
-	
-	void init_vulkan() {
-	    createInstance();
-	    createSurface();
-
-	    setupDebugMessenger();
-
-	    pickPhysicalDevice();
-	    createLogicalDevice();
-
-	    createSwapChain();
-	    createImageViews();
-	    
-	    createRenderPass();
-
-	    createColorResources();
-	    createDepthResources();	    
-	    createFramebuffers();
-	    
-	    createCommandPool();
-	    createCommandBuffers();
-
-	    createVertexBuffer();
-	    createIndexBuffer();
-
-	    createStorageBuffer();
-	    createUniformBuffers();
-	    createGlyphBuffers();
-	    
-	    createDescriptorSetLayout();
-	    createDescriptorPool();
-	    allocateDescriptorSets();
-	    updateDescriptorSets();
-	    
-	    createGraphicsPipeline();
-
-	    createSyncObjects();
-	}
-	
+		
 	void main_loop() {
-	    std::thread { socket_listener }.detach();
+	    // std::thread { socket_listener }.detach();
 	    
 	    while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -335,7 +350,10 @@ namespace vk_engine {
 	void createIndexBuffer();
 	
 	void createUniformBuffers();
+
 	void createStorageBuffer();
+	void initStorageBuffer();
+	
 	void createGlyphBuffers();
 	
 	void createDescriptorSetLayout();
@@ -351,11 +369,8 @@ namespace vk_engine {
 	void recreateSwapChain();
 
 	void updateUniformBuffer(uint32_t currentImage);
-	void updateStorageBuffer();
 
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	void drawFrame();
-
-	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
     };
 }

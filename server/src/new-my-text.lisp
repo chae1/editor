@@ -169,7 +169,7 @@ chaewon -> ((tc,            (tc,         ..
   (file-path nil)
   (line-tree nil :type (or null my-tree:multi-cursor-tree!))
   (text-iter-cursor nil :type (or null my-tree:cursor!))
-  (user-table (make-hash-table :test 'eq) :type hash-table))
+  (user-list nil :type (or null cons)))
 
 (export 'create-text!)
 (defobjfun create-text! ()
@@ -201,7 +201,7 @@ chaewon -> ((tc,            (tc,         ..
         (format t "file not exists.~%"))))
 
 (defobjfun print-cursor (user! text! line!)
-  (objdolist (user! (hash-table-values user-table))
+  (objdolist (user! user-list)
     (objdolist (cursor! cursor-list)      
       (when (and (eq (my-tree:index-of text-iter-cursor)
 		     (my-tree:index-of text-cursor))
@@ -232,7 +232,7 @@ chaewon -> ((tc,            (tc,         ..
 (defobjfun print-char (user! text! line! char!)
   (objlet* ((x-advance (get-x-advance user! char!))
 	    (y-advance (get-y-advance user!)))   
-    (format osstream "key ~a ~a ~a ~a ~a"
+    (format osstream "char ~a ~a ~a ~a ~a"
 	    char
 	    (+ -1 (* (/ (- window-width width-vacancy) window-width) 2))
 	    (+ -1 (* (/ (- window-height height-vacancy) window-height) 2))
@@ -373,22 +373,22 @@ chaewon -> ((tc,            (tc,         ..
       (my-list:remove-cursor! char-list line-cursor))))
 
 (defobjfun link-user (user! text!)
-  (setf (gethash connect user-table) user!)
+  (push user! user-list)
   (add-primary-cursor user! text! 1 0)
   (setf text text!))
 
 (defobjfun unlink-user (user! text!)
-  (remhash connect user-table)
+  (remove-el user! user-list)
   (remove-cursors user! text!)
   (setf text nil))
 
-(defobjfun remove-user (user! text!)
-  (remhash connect user-table)
-  (objdolist (cursor! cursor-list)
-    (my-tree:remove-cursor! line-tree text-cursor)
-    (objlet* ((line! (my-tree:get-data text-cursor)))
-      (my-list:remove-cursor! char-list line-cursor)))
-  (setf cursor-list nil))
+;; (defobjfun remove-user (user! text!)
+;;   (remhash connect user-table)
+;;   (objdolist (cursor! cursor-list)
+;;     (my-tree:remove-cursor! line-tree text-cursor)
+;;     (objlet* ((line! (my-tree:get-data text-cursor)))
+;;       (my-list:remove-cursor! char-list line-cursor)))
+;;   (setf cursor-list nil))
 
 (defobjfun copy-and-paste-primary-cursor (user! text!)
   (objlet* ((cursor! primary-cursor))

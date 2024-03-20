@@ -73,6 +73,7 @@ namespace font {
 	vector<GlyphInfo> glyph_infos;
 
 	void generate_font_buffers();
+	void print_font_buffers();
 
 	// ordered by glyph_index
 
@@ -96,8 +97,10 @@ namespace font {
 	vector<int> size_buffer;
 	vector<Curve> curve_buffer;
 	
-	void print_font_buffers();
-
+	void generate_glyph_map();
+	unordered_map<char, int> glyph_map;
+	
+	
     private:
 	int glyph_size;
 	int split_size = 16;
