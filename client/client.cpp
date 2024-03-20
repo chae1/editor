@@ -20,7 +20,7 @@ void socket_listener();
 
 int width = 500;
 int height = 400;
-int font_size = 50;
+int font_size = 200;
 
 Engine engine { width, height, "3dit", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
 
