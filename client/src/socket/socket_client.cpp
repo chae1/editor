@@ -184,7 +184,7 @@ void Socket_client::read_msg() {
 	}
     }
     
-    std::cout << "read msg : " << buf << std::endl;
+    std::cout << "read msg : " << buf << "\n";
 }
 
 bool Socket_client::recv_msg() {
@@ -199,7 +199,7 @@ bool Socket_client::recv_msg() {
 	throw std::runtime_error("recv failed");
     }
     
-    std::cout << "recv returned : " << ret << std::endl;
-    std::cout << buf << std::endl;
+    // std::cout << "recv returned : " << ret << std::endl;
+    // std::cout << buf << std::endl;
     return true;
 }

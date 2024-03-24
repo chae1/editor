@@ -20,7 +20,7 @@ void socket_listener();
 
 int width = 500;
 int height = 400;
-int font_size = 200;
+int font_size = 40;
 
 Engine engine { width, height, "3dit", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
 
@@ -86,14 +86,14 @@ void parse_msg() {
 	if (draw_flag) {	
 	    if (token == "char") {
 		char c;
-		float x, y, width, height;
-		ss >> c >> x >> y >> width >> height;
+		float char_left, char_up, char_width, char_height;
+		ss >> c >> char_left >> char_up >> char_width >> char_height;
 
-		// fmt::print("{}, {}, {}, {}\n", x, y, width, height);
-		// fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(x + width/2.0f, y + height/2.0f, 1.0f)) * scale(mat4(1.0f), vec3(width/2.0f, height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
+		// fmt::print("{}, {}, {}, {}\n", char_left, char_up, char_width, char_height);
+		// fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_left + char_width/2.0f, char_up + char_height/2.0f, 1.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
 		
 		StorageBufferObject ssbo;
-		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(x + width/2.0f, y + height/2.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(width/2.0f, height/2.0f, 1.0f));
+		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(char_left, char_up, 0.1f)) * glm::scale(glm::mat4(1.0f), glm::vec3(char_width/2.0f, char_height/2.0f, 0.1f));
 		ssbo.view = glm::mat4(1.0f);
 		ssbo.proj = glm::mat4(1.0f);
 		ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);

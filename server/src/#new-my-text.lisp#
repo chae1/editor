@@ -214,7 +214,7 @@ chaewon -> ((tc,            (tc,         ..
 		  (y-advance (get-y-advance user!)))   
 	  (format osstream "~a ~a ~a ~a "
 		  (+ -1 (* (/ (- window-width width-vacancy) window-width) 2))
-		  (- 1 (* (/ (- (- window-height height-vacancy) y-advance) window-height) 2))
+		  (- 1 (* (/ +- (- window-height height-vacancy) y-advance) window-height) 2))
 		  (* (/ x-advance window-width) 2)
 		  (* (/ y-advance window-height) 2)))
 	
@@ -232,15 +232,15 @@ chaewon -> ((tc,            (tc,         ..
 (defobjfun print-char (user! text! line! char!)
   (objlet* ((x-advance (get-x-advance user! char!))
 	    (y-advance (get-y-advance user!)))   
-    (format osstream "char ~a ~a ~a ~a ~a"
-	    char
-	    (+ -1 (* (/ (- window-width width-vacancy) window-width) 2))
-	    (- 1 (* (/ (- (- window-height height-vacancy) y-advance) window-height) 2))
-	    (* (/ x-advance window-width) 2)
-	    (* (/ y-advance window-height) 2))
-   
-    (format osstream "~%")
-    
+    (when (not-eq char #\ )
+      (format osstream "char ~a ~a ~a ~a ~a"
+	      char
+	      (+ -1 (* (/ (- window-width width-vacancy) window-width) 2))
+	      (- 1 (* (/ (- (- window-height height-vacancy) y-advance) window-height) 2))
+	      (* (/ x-advance window-width) 2)
+	      (* (/ y-advance window-height) 2))
+      
+      (format osstream "~%"))    
     (decf width-vacancy x-advance)
     (decf word-width x-advance)))
 
