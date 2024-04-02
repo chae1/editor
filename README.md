@@ -42,3 +42,5 @@ Common lisp server and c++ client for 3d shared text editing.
    emacs
    ```
    in emacs, press `Alt+x`, type `slime`, and press `Enter` 
+
+2. 
