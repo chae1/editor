@@ -18,7 +18,7 @@
          (insert-data-after-cursor *l* cursor m))
        (format t "~a~%~%" *l*)
        (dotimes (m 3)
-         (delete-data-before-cursor *l* cursor))
+         (delete-data-at-cursor *l* cursor))
        (format t "~a~%~%" *l*)
        (move-cursor-to-next *l* cursor)
        (move-cursor-to-next *l* cursor)
@@ -38,32 +38,45 @@
 
        (objlet* ((l-multi-cursor-list! (create-multi-cursor-list!))
 		 (c-cursor! (create-cursor! l 0)))
-	 (time
-	  (dotimes (m 400000)
-	    (if (eq 0 (mod m 100000))
-		(print m))
-            (insert-data-after-cursor l c m)))
+	 (format t "insert 1000000 elems~%")
+	 (time (dotimes (m 1000000)
+		 ;; (if (eq 0 (mod m 100000))
+		 ;; 	(print m))
+		 (insert-data-after-cursor l c m)))	 
+	
+	 (print l-size)
 
-	 (print (get-size l))
+	 (format t "random delete and insert 100 times~%")
+	 (time (dotimes (m 100)
+		 (let ((d))
+		   (let ((i (1+ (random (1- l-size)))))
+		     (move-cursor-to-index l c i)
+		     (setq d (get-data c))
+		     (delete-data-at-cursor l c))
+		   (let ((i (1+ (random (1- l-size)))))
+		     (move-cursor-to-index l c i)
+		     (insert-data-after-cursor l c d)))))
+	 
+	 (print l-size)
 
-	 (dotimes (m 1)
-	   (time
-	    (progn
-	      (move-cursor-to-index l c 10)
-	      (print (get-data c))))
+	 ;; (dotimes (m 1)
+	 ;;   (time
+	 ;;    (progn
+	 ;;      (move-cursor-to-index l c 10)
+	 ;;      (print (get-data c))))
 	   
-	   (time
-	    (progn
-	      (move-cursor-to-index l c 300000)
-	      (print (get-data c))
-	      ))
+	 ;;   (time
+	 ;;    (progn
+	 ;;      (move-cursor-to-index l c 300000)
+	 ;;      (print (get-data c))
+	 ;;      ))
 
-	   (move-cursor-to-index l c 10)
-	   (time
-	    (dotimes (m 1000)
-	      (move-cursor-to-next l c)
-	      (print (get-data c))))
-	   )
+	 ;;   (move-cursor-to-index l c 10)
+	 ;;   (time
+	 ;;    (dotimes (m 1000)
+	 ;;      (move-cursor-to-next l c)
+	 ;;      (print (get-data c))))
+	 ;;   )
 	 )
     
        )))

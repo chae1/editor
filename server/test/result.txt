@@ -1,0 +1,37 @@
+* multi cursor list test
+
+insert 1000000 elems
+Evaluation took:
+  0.043 seconds of real time
+  0.044221 seconds of total run time (0.044213 user, 0.000008 system)
+  102.33% CPU
+  92,685,300 processor cycles
+  32,026,240 bytes consed
+  
+random delete and insert 100 times
+Evaluation took:
+  0.963 seconds of real time
+  0.961469 seconds of total run time (0.961358 user, 0.000111 system)
+  99.79% CPU
+  2,030,874,520 processor cycles
+  31,328 bytes consed
+
+* multi cursor tree test
+
+insert 1000000 elems
+Evaluation took:
+  1.335 seconds of real time
+  1.336426 seconds of total run time (1.312416 user, 0.024010 system)
+  [ Real times consist of 0.087 seconds GC time, and 1.248 seconds non-GC time. ]
+  [ Run times consist of 0.085 seconds GC time, and 1.252 seconds non-GC time. ]
+  100.07% CPU
+  2,821,953,560 processor cycles
+  63,996,656 bytes consed
+
+random delete and insert 100 times
+Evaluation took:
+  0.000 seconds of real time
+  0.000615 seconds of total run time (0.000603 user, 0.000012 system)
+  100.00% CPU
+  1,296,412 processor cycles
+  0 bytes consed

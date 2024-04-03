@@ -133,9 +133,11 @@ void Socket_client::read_msg() {
     
     while (!newline_visited || buf_end == 0) {
 	newline_visited = false;
+	// recv from socket if all characters in temp_buf are read already
 	if (temp_buf_unread_begin == temp_buf_unread_end) {
 	    memset(temp_buf, 0, sizeof(temp_buf));
 	    int ret = recv(socket_fd, temp_buf, sizeof(temp_buf), 0);
+	    // std::cout << "recv msg : " << temp_buf << "\n";
 	    if (ret == -1) {
 		std::cout << "errno = " << errno << "\n";
 		throw std::runtime_error("recv failed");
@@ -145,16 +147,13 @@ void Socket_client::read_msg() {
 	    temp_buf_unread_end = ret;
 	}
 
+	// copy from temp_buf characters before newline
 	for (size_t i = temp_buf_unread_begin; i < temp_buf_unread_end; i++) {
 	    char c = temp_buf[i];
 	    if (c == '\n') {
 		// copy before \n
 		int copy_len = i - temp_buf_unread_begin;
-		if (copy_len == 0) {
-		    temp_buf_unread_begin = i + 1;
-		    continue;
-		}
-		// leave space for '\0'
+
 		if (buf_end + copy_len >= bufsize) {
 		    std::cout << "1 " << buf_end << " " << copy_len << " " << bufsize << std::endl;
 		    throw std::runtime_error("error msg greater than bufsize");
@@ -183,7 +182,8 @@ void Socket_client::read_msg() {
 	    temp_buf_unread_begin = temp_buf_unread_end;
 	}
     }
-    
+
+    fmt::print("begin {} end {}\n", temp_buf_unread_begin, temp_buf_unread_end);
     std::cout << "read msg : " << buf << "\n";
 }
 

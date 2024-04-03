@@ -44,7 +44,7 @@
 
 (defobjfun send-text (user! text!)
   (send-msg connect (with-output-to-string (stream) (format stream "draw begin~%")))
-  (let ((msg (get-text user! text!)))
+  (let ((msg (print-text user! text!)))
     ;; (print msg)
     ;; (print (length msg))
     (send-msg connect msg))
@@ -76,7 +76,7 @@
   (send-max-size user!)
   (send-text user! text!)
   
-  ;; (print (get-text user! text!))
+  ;; (print (print-text user! text!))
   )
 
 (defun map-alist-to-table (alist table)

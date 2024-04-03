@@ -214,7 +214,7 @@ chaewon -> ((tc,            (tc,         ..
 		  (y-advance (get-y-advance user!)))   
 	  (format osstream "~a ~a ~a ~a "
 		  (+ -1 (* (/ (- window-width width-vacancy) window-width) 2))
-		  (- 1 (* (/ (- (- window-height height-vacancy) y-advance) window-height) 2))
+		  (- 1 (* (/ (+ (- window-height height-vacancy) y-advance) window-height) 2))
 		  (* (/ x-advance window-width) 2)
 		  (* (/ y-advance window-height) 2)))
 	
@@ -227,20 +227,20 @@ chaewon -> ((tc,            (tc,         ..
   (setf width-vacancy window-width)
   (objlet* ((y-advance (get-y-advance user!)))
     ;; (format osstream "~%")
-    (decf height-vacancy y-advance)))
+    (decf height-vacancy y-advance)
+    (setf width-vacancy window-width)))
 
 (defobjfun print-char (user! text! line! char!)
   (objlet* ((x-advance (get-x-advance user! char!))
-	    (y-advance (get-y-advance user!)))   
-    (format osstream "char ~a ~a ~a ~a ~a"
-	    char
-	    (+ -1 (* (/ (- window-width width-vacancy) window-width) 2))
-	    (- 1 (* (/ (- (- window-height height-vacancy) y-advance) window-height) 2))
-	    (* (/ x-advance window-width) 2)
-	    (* (/ y-advance window-height) 2))
-   
-    (format osstream "~%")
-    
+	    (y-advance (get-y-advance user!)))
+    (when (not-eq char #\ )
+      (format osstream "char ~a ~a ~a ~a ~a~%"
+	      char
+	      (+ -1 (* (/ (- window-width width-vacancy) window-width) 2))
+	      (- 1 (* (/ (+ (- window-height height-vacancy) y-advance) window-height) 2))
+	      (* (/ x-advance window-width) 2)
+	      (* (/ y-advance window-height) 2)))
+    (format t "char ~a window-width ~a width-vacancy ~a word-width ~a~%" char window-width width-vacancy word-width)
     (decf width-vacancy x-advance)
     (decf word-width x-advance)))
 
@@ -279,7 +279,7 @@ chaewon -> ((tc,            (tc,         ..
 			    (print-char user! text! line! char!)
 			    (print-cursor user! text! line!)))))))))))
 
-(defobjfun get-text (user! text!)
+(defobjfun print-text (user! text!)
   (setf width-vacancy window-width)
   (setf height-vacancy window-height)
 
@@ -301,15 +301,13 @@ chaewon -> ((tc,            (tc,         ..
 	(my-list:move-cursor-to-next char-list word-end-cursor)
 	(objlet* ((char! (my-list:get-data word-end-cursor))
 		  (x-advance (get-x-advance user! char!)))
-	  
 	  (incf word-width x-advance)
-
+	  (format t "word-width ~a~%" word-width)
 	  (cond ((eq char #\ )
                  ;; move cursor to the character before #\ 
                  (my-list:move-cursor-to-prev char-list word-end-cursor)
-                 (decf word-width x-advance)
                  (print-curr-word user! text! line!)
-                 ;; move cursor to  #\ 
+                 ;; move cursor to #\ 
 		 (my-list:move-cursor-to-next char-list word-start-cursor)
                  (print-char user! text! line! char!)
 		 (print-cursor user! text! line!)
@@ -324,9 +322,9 @@ chaewon -> ((tc,            (tc,         ..
 
 "
 text : tree
-  line : list ^lic-user0
+  line : list ^tc-user0
     char1
-    char2 ^cic-user0
+    char2 ^lc-user0
     ..
   line : list
     char1
