@@ -7,7 +7,15 @@ Common lisp server and c++ client for 3d shared text editing.
 ![image](https://github.com/chae1/editor/assets/29856486/18e689d2-46ee-4e01-9219-2472f8a9e888)
 
 ## How to run the editor
-
+### For Ubuntu
+client
+```console
+sudo apt update
+sudo apt-get install libglfw3-dev
+sudo apt-get install libvulkan-dev
+sudo apt-get install libfmt-dev
+./client ip:port username
+```
 ### For Mac OS
 
 1. [install Common Lisp](https://lisp-lang.org/learn/getting-started/)
