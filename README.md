@@ -8,13 +8,17 @@ Common lisp server and c++ client for 3d shared text editing.
 
 ## How to run the editor
 ### For Ubuntu
-client
+run client
 ```console
 sudo apt update
 sudo apt-get install libglfw3-dev
 sudo apt-get install libvulkan-dev
 sudo apt-get install libfmt-dev
 ./client ip:port username
+```
+build client
+```console
+sudo apt install libglm-dev
 ```
 ### For Mac OS
 
