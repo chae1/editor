@@ -11,7 +11,7 @@
 using namespace vk_engine;
 
 void Engine::init_font() {
-    fontInfo.load_font("/home/chaewon/Desktop/chae1/github/editor/font/txt/UbuntuMono-R/");
+    fontInfo.load_font("../font/txt/UbuntuMono-R/");
     fontInfo.generate_font_buffers();
     fontInfo.print_font_buffers();
     fontInfo.generate_glyph_map();

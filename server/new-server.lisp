@@ -184,7 +184,7 @@
     (send-max-size user!)
     (send-text user! text!)))
 
-(defmacro my-thread (form exit-form &rest cases)
+(defmacro thread-with-handler (form exit-form &rest cases)
   `(sb-thread:make-thread
     (lambda ()
       (unwind-protect
@@ -201,14 +201,14 @@
 
 (defobjfun handle-connect (connect socket-stream-in text!)
   (objlet* ((user! (make-user! :connect connect :socket-stream-in socket-stream-in)))
-    (my-thread
+    (thread-with-handler
      (loop
        (let ((init-msg (read-line socket-stream-in)))
 	 (handle-msg init-msg user! text!)))
      
      ;; exit form
      (progn
-       (format t "~%")
+       ;; (format t "~%")
        (format t "unlinking user and text~%")
        (unlink-user user! text!)
        (format t "(handle-connect) closing connect ~a~%" connect)
@@ -227,7 +227,7 @@
   (setf *socket* (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
   (setf *text* (create-text!))
   (let ((out *standard-output*))
-    (my-thread
+    (thread-with-handler
      (progn
        (setf (sb-bsd-sockets:sockopt-reuse-address *socket*) t)
        (setf (sb-bsd-sockets:non-blocking-mode *socket*) t)
@@ -246,13 +246,13 @@
        (format out "(run-text-server!) exiting server thread~%"))
      ;; handler cases
      (sb-bsd-sockets:bad-file-descriptor-error (o)
-					       ;; (format t "(run-text-server!) ~a~%" o)
+					       (format t "(run-text-server!) ~a~%" o)
 					       )
      (sb-bsd-sockets:address-in-use-error (o)
-					  ;; (format t "(run-text-server!) ~a~%" o)
+					  (format t "(run-text-server!) ~a~%" o)
 					  )
      )))
 
 (defun close-socket ()
-  (format t "(stop-text-server!) closing server listeing to ~a~%" *socket*)
+  (format t "(stop-text-server!) closing socket ~a~%" *socket*)
   (sb-bsd-sockets:socket-close *socket*))
