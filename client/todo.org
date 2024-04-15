@@ -1,18 +1,22 @@
 # -*- org-todo-keyword-faces: (("TODO" . "yellow green") ("PROG" . "orange") ("DONE" . "indian red") ("HOLD" . "magenta") ("STOP" . "dodger blue")); -*-
-#+TODO: TODO IDEA PROG DONE HOLD STOP B
+#+TODO: IDEA TODO PROG DONE HOLD STOP B
 
 git branch
+main -> add-cmake -> windows
+working on windows branch
 
-* main -> add-cmake -> windows
-
-** TODO [#A] linux server windows client communication 
+* editor
+** TODO [#A] linux server windows client
+*** DONE use cmake to make clangd not complain about includes
+*** PROG [#A] cmake tutorial step 1/12
 *** rebuild client windows version
 *** combine windows/linux version to one file
-
 ** TODO [#B] modify client code to enable cross compilation to linux/windows
 
 ** TODO [#C] cmake build
 
-* add-cmake <-
+* leetcode
+** dp
+*** PROG [#A] coin problem
 
-* main <-
+* 지원 관련
