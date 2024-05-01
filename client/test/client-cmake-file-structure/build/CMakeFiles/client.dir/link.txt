@@ -1,0 +1,1 @@
+/usr/bin/c++  -g -Wall CMakeFiles/client.dir/client.cpp.o -o client  lib/RenderingEngine/libengine.a lib/SocketClient/libsocketClient.a lib/FontInfo/libfontInfo.a _deps/glm-build/glm/libglm.a lib/Window/libwindow.a _deps/fmt-build/libfmt.a _deps/glfw-build/src/libglfw3.a /usr/lib/x86_64-linux-gnu/librt.a -lm -ldl /usr/lib/x86_64-linux-gnu/libvulkan.so

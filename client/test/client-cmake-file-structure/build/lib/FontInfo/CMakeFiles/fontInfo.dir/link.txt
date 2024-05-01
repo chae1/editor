@@ -1,0 +1,2 @@
+/usr/bin/ar qc libfontInfo.a CMakeFiles/fontInfo.dir/fontInfo.cpp.o
+/usr/bin/ranlib libfontInfo.a
