@@ -9,7 +9,6 @@
 #include <array>
 #include <algorithm>
 
-#define FMT_HEADER_ONLY
 #include <fmt/core.h>
 #include <fmt/ranges.h>
 #include <fmt/format.h>
@@ -19,6 +18,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -27,15 +27,13 @@
 #include <glm/gtx/hash.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-#include "../font/font.h"
-#include "../socket/socket_client.h"
+#include "fontInfo.h"
+#include "socket_client.h"
 
 using namespace font;
 using namespace socket_client;
 
 namespace vk_engine {
-
-    #define NDEBUG
 
 #ifdef NDEBUG
     const bool enableValidationLayers = false;

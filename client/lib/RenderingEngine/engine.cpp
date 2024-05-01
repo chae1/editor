@@ -13,8 +13,8 @@ using namespace vk_engine;
 namespace fs = std::filesystem;
 
 void Engine::init_font() {
-    fs::path ubuntu_mono_r_path { fs::current_path() / "../font/txt/UbuntuMono-R/" };
-    fmt::print("start loading {}\n", string(ubuntu_mono_r_path));
+    fs::path ubuntu_mono_r_path { fs::current_path() / "../../font/txt/UbuntuMono-R/" };
+    fmt::print("loading font {}\n", string(ubuntu_mono_r_path));
     fontInfo.load_font(ubuntu_mono_r_path);
     fontInfo.generate_font_buffers();
     fontInfo.print_font_buffers();
@@ -887,7 +887,7 @@ void Engine::createStorageBuffer() {
 }
 
 void Engine::initStorageBuffer() {
-    objs.resize(static_cast<size_t>(ssboCount));
+    render_objs.resize(static_cast<size_t>(ssboCount));
     VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;
     
     StorageBufferObject ssbo{};
@@ -897,15 +897,15 @@ void Engine::initStorageBuffer() {
     ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     ssbo.charId = fontInfo.glyph_map['3'];
     
-    objs[0] = ssbo;
+    render_objs[0] = ssbo;
 
-    memcpy(storageBufferMapped, objs.data(), bufferSize);
+    memcpy(storageBufferMapped, render_objs.data(), bufferSize);
 }
 
 void Engine::updateStorageBuffer() {
-    ssboCount = objs.size();
+    ssboCount = render_objs.size();
     VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;
-    memcpy(storageBufferMapped, objs.data(), bufferSize);
+    memcpy(storageBufferMapped, render_objs.data(), bufferSize);
 }
 
 void Engine::recreateStorageBuffer() {
@@ -1374,90 +1374,90 @@ void Engine::updateUniformBuffer(uint32_t currentFrame) {
 
 void Engine::drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    render_objs_mutex.lock();
     
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-    // fmt::print("acquire image result {}\n", result);
-    
+
+    // fmt::print("acquire image result {}\n", static_cast<int>(result));
+    // fmt::print("framebufferResized {}\n", framebufferResized);
+    // fmt::print("mouseLeftButtonPressed {}\n", mouseLeftButtonPressed);
+    // fmt::print("storageBufferRecreateFlag {}\n", storageBufferRecreateFlag);
+
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-	if (mouseLeftButtonPressed) {
-	    fmt::print("recreateSwapChain\n");
-            recreateSwapChain();
-	    framebufferResized = false;
+	fmt::print("swapchain out of date\n");
+	
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+	fmt::print("aqcuireNextImage error : {}\n", static_cast<int>(result));
+        throw std::runtime_error("failed to acquire swap chain image!");
+	
+    } else if (framebufferResized && mouseLeftButtonPressed) {
+	fmt::print("recreateSwapChain\n");
+	recreateSwapChain(); // send resize-window message to server and recreate swapchain
+	framebufferResized = false;	    
+
+    } else {
+	if (storageBufferRecreateFlag == true) {
+	    fmt::print("recreate storage buffer\n");	
+	    recreateStorageBuffer();
+	
+	    storageBufferRecreateFlag = false;
 	}
 
-	fmt::print("swapchain out of date\n");
-        return;
-
-    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-	fmt::print("aqcuireNextImage error : {}\n", (int)result);
-        throw std::runtime_error("failed to acquire swap chain image!");
-    }
-
-    if (storageBufferRecreateFlag == true) {
-	fmt::print("recreate storage buffer\n");	
-	recreateStorageBuffer();
+	if (storageBufferUpdateFlag == true) {
+	    fmt::print("update storage buffer\n");	
+	    updateStorageBuffer();
 	
-	storageBufferRecreateFlag = false;
-    } 
+	    storageBufferUpdateFlag = false;
+	}
 
-    if (storageBufferUpdateFlag) {
-	fmt::print("update storage buffer\n");	
-	updateStorageBuffer();
-	
-	storageBufferUpdateFlag = false;
-    }
+	vkResetFences(device, 1, &inFlightFences[currentFrame]);
+	vkResetCommandBuffer(commandBuffers[currentFrame], 0);
+	recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
-    vkResetFences(device, 1, &inFlightFences[currentFrame]);
-    vkResetCommandBuffer(commandBuffers[currentFrame], 0);
-    recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+	updateUniformBuffer(currentFrame);
 
-    updateUniformBuffer(currentFrame);
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+	VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
-    VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
+	VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
 
-    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to submit draw command buffer!");
+	}
 
-    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to submit draw command buffer!");
-    }
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+	VkSwapchainKHR swapChains[] = {swapChain};
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pResults = nullptr;
 
-    VkSwapchainKHR swapChains[] = {swapChain};
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr;
-
-    result = vkQueuePresentKHR(presentQueue, &presentInfo);
-    // fmt::print("queue present result {}\n", result);
+	result = vkQueuePresentKHR(presentQueue, &presentInfo);
+	// fmt::print("queue present result {}\n", result);
     
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
-	// if (mouseLeftButtonPressed) {
-        //     framebufferResized = false;
-        //     recreateSwapChain();
-	// }
-
-	fmt::print("queue present error\n");
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+	    fmt::print("queue present warning\n");
+	} else if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to present swap chain image!");
+	}
 	
-    } else if (result != VK_SUCCESS) {
-        throw std::runtime_error("failed to present swap chain image!");
+	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    render_objs_mutex.unlock();
 }

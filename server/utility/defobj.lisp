@@ -308,7 +308,6 @@
     ;; (format t "~%defobjfun bound-objs : ~%~s~%" *bound-objs*)
     `(lambda ,(modify-form objs) ,@(modify-form body))))
 
-
 (export 'export-symbols)
 (defmacro export-symbols (pkg &rest objs)
   (let ((pkg-curr *package*)

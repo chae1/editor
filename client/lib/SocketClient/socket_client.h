@@ -25,7 +25,7 @@ namespace socket_client {
 	
 	void read_msg();
 	bool recv_msg();
-	
+		
     private:
 	int socket_fd;
 

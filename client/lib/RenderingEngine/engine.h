@@ -8,6 +8,7 @@
 #include <string>
 #include <array>
 #include <algorithm>
+#include <mutex>
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>
@@ -115,15 +116,13 @@ namespace vk_engine {
 	void init_vulkan() {
 	    createInstance();
 	    createSurface();
-
 	    setupDebugMessenger();
 
 	    pickPhysicalDevice();
 	    createLogicalDevice();
 
 	    createSwapChain();
-	    createImageViews();
-	    
+	    createImageViews();   
 	    createRenderPass();
 
 	    createColorResources();
@@ -166,7 +165,9 @@ namespace vk_engine {
 	
 	int maxSsboCount = 1;
 	int ssboCount = 1;
-	std::vector<StorageBufferObject> objs;
+
+	std::mutex render_objs_mutex;
+	std::vector<StorageBufferObject> render_objs;
 	
 	bool framebufferResized = false;
 	bool mouseLeftButtonPressed = false;
@@ -346,17 +347,16 @@ namespace vk_engine {
 	
 	void createVertexBuffer();
 	void createIndexBuffer();
-	
+	// transition
 	void createUniformBuffers();
-
+	// characters
 	void createStorageBuffer();
 	void initStorageBuffer();
-	
+	// font
 	void createGlyphBuffers();
 	
 	void createDescriptorSetLayout();
 	void createDescriptorPool();
-
 	void allocateDescriptorSets();
 	void updateDescriptorSets();
 
@@ -365,7 +365,6 @@ namespace vk_engine {
 	void createSyncObjects();
 
 	void recreateSwapChain();
-
 	void updateUniformBuffer(uint32_t currentImage);
 
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);

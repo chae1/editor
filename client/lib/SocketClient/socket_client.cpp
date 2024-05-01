@@ -189,7 +189,7 @@ void Socket_client::read_msg() {
 
 bool Socket_client::recv_msg() {
     // set socket to non blocking mode before use
-    int flags = MSG_DONTWAIT;
+    // int flags = MSG_DONTWAIT;
     int ret = recv(socket_fd, buf, sizeof(buf), 0); 
     if (ret == -1) {
 	if (errno == EAGAIN || errno == EWOULDBLOCK) {

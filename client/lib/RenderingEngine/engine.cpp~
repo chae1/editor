@@ -1,4 +1,5 @@
 #include "engine.h"
+
 #include <GLFW/glfw3.h>
 #include <cstring>
 #include <vulkan/vulkan_core.h>
@@ -9,9 +10,12 @@
 #include <filesystem>
 
 using namespace vk_engine;
+namespace fs = std::filesystem;
 
 void Engine::init_font() {
-    fontInfo.load_font("/home/chaewon/Desktop/chae1/github/editor/font/txt/UbuntuMono-R/");
+    fs::path ubuntu_mono_r_path { fs::current_path() / "../font/txt/UbuntuMono-R/" };
+    fmt::print("start loading {}\n", string(ubuntu_mono_r_path));
+    fontInfo.load_font(ubuntu_mono_r_path);
     fontInfo.generate_font_buffers();
     fontInfo.print_font_buffers();
     fontInfo.generate_glyph_map();
@@ -285,7 +289,7 @@ void Engine::pickPhysicalDevice() {
 	    return vram_size;
 	};
 	
-	fmt::print("{} (type {}, vram bytes {}", props.deviceName, props.deviceType, getVramSize(device));
+	fmt::print("{} (type {}, vram bytes {}", props.deviceName, (int)props.deviceType, getVramSize(device));
 	if (isDeviceSuitable(device, surface)) {
             fmt::print(" , suitable)\n");
 	    
@@ -345,7 +349,7 @@ void Engine::pickPhysicalDevice() {
     VkPhysicalDeviceProperties pProperties;
     vkGetPhysicalDeviceProperties(device, &pProperties);
     fmt::print("{} selected.\n", pProperties.deviceName);
-    fmt::print("max msaasamples {}\n", msaaSamples);
+    fmt::print("max msaasamples {}\n", (int)msaaSamples);
 }
 
 void Engine::createLogicalDevice() {
@@ -884,7 +888,7 @@ void Engine::createStorageBuffer() {
 
 void Engine::initStorageBuffer() {
     objs.resize(static_cast<size_t>(ssboCount));
-    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;    
+    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;
     
     StorageBufferObject ssbo{};
     ssbo.model = glm::mat4(1.0f);
@@ -900,7 +904,7 @@ void Engine::initStorageBuffer() {
 
 void Engine::updateStorageBuffer() {
     ssboCount = objs.size();
-    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;    
+    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;
     memcpy(storageBufferMapped, objs.data(), bufferSize);
 }
 
@@ -969,13 +973,13 @@ void Engine::createGlyphBuffers() {
 	sizeof(Curve) * fontInfo.curve_buffer.size()
     };
 
-    size_t bufNum = buffersData.size();
+    size_t bufSize = buffersData.size();
 
-    glyphBuffers.resize(bufNum);
-    glyphBuffersMemory.resize(bufNum);
+    glyphBuffers.resize(bufSize);
+    glyphBuffersMemory.resize(bufSize);
     glyphBuffersSize = buffersSize;
     
-    for (size_t i = 0; i < bufNum; i++) {
+    for (size_t i = 0; i < bufSize; i++) {
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
 	createBuffer(buffersSize[i], VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
@@ -1013,11 +1017,11 @@ void Engine::createDescriptorSetLayout() {
 void Engine::createDescriptorPool() {
     std::vector<VkDescriptorPoolSize> poolSizes{
 	{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) },
-	{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 }
+	{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) }
     };
 
     for (size_t i = 0; i < glyphBuffers.size(); i++) {
-	poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 });
+	poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) });
     }
 
     VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), static_cast<uint32_t>(poolSizes.size()), poolSizes.data() };
@@ -1039,16 +1043,16 @@ void Engine::allocateDescriptorSets() {
 
 void Engine::updateDescriptorSets() {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-	std::vector<VkDescriptorBufferInfo> buffersInfo{
+	std::vector<VkDescriptorBufferInfo> buffersInfo {
 	    { uniformBuffers[i], 0, sizeof(UniformBufferObject) },
 	    { storageBuffer, 0, sizeof(StorageBufferObject) * maxSsboCount }
 	};
 
 	for (size_t j = 0; j < glyphBuffers.size(); j++) {
-	    buffersInfo.push_back({ glyphBuffers[j], 0, glyphBuffersSize[j] });    
+	    buffersInfo.push_back({ glyphBuffers[j], 0, glyphBuffersSize[j] });
 	}
-		
-	std::vector<VkWriteDescriptorSet> descriptorWrites{
+
+	std::vector<VkWriteDescriptorSet> descriptorWrites {
 	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &buffersInfo[0], nullptr },
 	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &buffersInfo[1], nullptr }
 	};
@@ -1095,8 +1099,8 @@ VkShaderModule Engine::createShaderModule(const std::vector<char>& code) {
 }
 
 void Engine::createGraphicsPipeline() {
-    auto vertShaderCode = readFile("./src/vulkan/vert.spv");
-    auto fragShaderCode = readFile("./src/vulkan/frag.spv");
+    auto vertShaderCode = readFile(std::filesystem::current_path().string() + "/lib/RenderingEngine/vert.spv");
+    auto fragShaderCode = readFile(std::filesystem::current_path().string() + "/lib/RenderingEngine/frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -1377,16 +1381,16 @@ void Engine::drawFrame() {
     
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 	if (mouseLeftButtonPressed) {
+	    fmt::print("recreateSwapChain\n");
             recreateSwapChain();
 	    framebufferResized = false;
 	}
 
 	fmt::print("swapchain out of date\n");
-
         return;
 
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-	fmt::print("aqcuireNextImage error : {}\n", result);
+	fmt::print("aqcuireNextImage error : {}\n", (int)result);
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
@@ -1398,6 +1402,7 @@ void Engine::drawFrame() {
     } 
 
     if (storageBufferUpdateFlag) {
+	fmt::print("update storage buffer\n");	
 	updateStorageBuffer();
 	
 	storageBufferUpdateFlag = false;

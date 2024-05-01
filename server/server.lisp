@@ -3,243 +3,257 @@
 (ql:quickload "bt-semaphore")
 (ql:quickload "serapeum")
 (ql:quickload "alexandria")
+(ql:quickload "sb-concurrency")
 
 (defpackage text-server
   (:use :common-lisp :my-utils :defobj :my-text :lparallel :bt :alexandria))
 
 (in-package :text-server)
 
-(defobj text-server!
-  (ip nil)
-  (port nil)
-  (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
-  (text-lock (make-lock) :type lock)
-  (text-manager (create-text-manager!) :type text-manager!)
-  (server nil :type (or null sb-thread:thread))
-  (userinfos nil :type (or null cons)))
+;; -1 1
+;; 0 width
+;; 0 height
+;; font-size 10
+;; em 1000
+;; x-advance 500
+;; y-advance 900
+;; x-max 500
+;; y-max 890
 
-(let ((keys-size 10))
-  (defobj state-keys!
-    (state 'normal :type symbol)
-    (keys (make-array keys-size :initial-element 0) :type array :read-only t))
+;; -1 + 2*10/1000 * (n-1)
+;; -1 + 2*10/
 
-  (defobj current-state!
-    (state-keys (make-state-keys!) :type state-keys!)
-    (temp-array (make-array keys-size :initial-element 0) :type array :read-only t)
-    (size keys-size :type integer)
-    (first-available-index 0 :type integer)))
+(defparameter *msg-handle-table* (make-hash-table :test 'equalp))
 
-(defobjfun one-key (current-state! key)
-  (objlet* ((state-keys! state-keys))
-    (do ((i 0 (1+ i)))
-	((eq i size))
-      (setf (aref keys i) 0))
-    (setf (aref keys 0) key)
-    (setf first-available-index 1)))
+(defun get-msg-handle (msg)
+  (gethash msg *msg-handle-table*))
 
-(defobjfun add-key (current-state! key)
-  (objlet* ((state-keys! state-keys))
-    (when (< first-available-index size)
-      (setf (aref keys first-available-index) key)
-      (incf first-available-index))))
+(defobjmacro set-msg-handle (init-msg user! text! variables &body body)
+  `(setf (gethash ,init-msg *msg-handle-table*)
+	 (objlambda (,user! ,text!)
+	   (let ,(mapcar (lambda (el) (list `,el `(read-line ,socket-stream-in)))
+		  variables)
+	     ,@body))))
 
-(defobjfun remove-key (current-state! key)
-  (objlet* ((state-keys! state-keys))  
-    ;; copy
-    (do ((i 0 (1+ i)))
-	((eq i size))
-      (setf (aref temp-array i) (aref keys i)))
-    ;; copy
-    (let ((j 0))
-      (do* ((i 0 (1+ i)))
-	   ((eq i size))
-	(let ((curr-el (aref temp-array i)))
-	  (when (not-eq curr-el key)
-	    (setf (aref keys j) curr-el)
-	    (incf j))))
-      (setf first-available-index j)
-      (do ((i j (1+ i)))
-	  ((eq i size))
-	(setf (aref keys i) 0)))))
+(defun send-msg (connect msg)
+  (sb-bsd-sockets:socket-send connect msg (length msg)))
 
-(defobjfun init-key (current-state!)
-  (objlet* ((state-keys! state-keys))
-    (do ((i 0 (1+ i)))
-	((eq i size))
-      (setf (aref keys i) 0))
-    (setf first-available-index 0)))
+(defun send-new-line (connect)
+  (let ((newline-buf (make-array 0 :element-type 'character :adjustable t :fill-pointer 0)))
+    (vector-push-extend #\Newline newline-buf)
+    (send-msg connect newline-buf)))
 
-(defobj key-event!
-  (key 0 :type integer)
-  (action 0 :type integer))
+(defobjfun send-text (user! text!)
+  (send-msg connect (with-output-to-string (stream) (format stream "draw begin~%")))
+  (let ((msg (print-text user! text!)))
+    ;; (print msg)
+    ;; (print (length msg))
+    (send-msg connect msg))
+  (send-msg connect (with-output-to-string (stream) (format stream "draw end~%"))))
 
-(defobj userinfo!
-  (username nil)
-  (connect nil)
-  (stream nil)
-  (key-event (make-key-event!) :type key-event!)
-  (current-state (make-current-state!) :type current-state!)
-  (msg-handler nil :type (or null sb-thread:thread))
+(defobjfun send-max-size (user!)
+  (objlet* ((font! font)
+	    (x-advance (get-default-x-advance user!))
+	    (y-advance (get-y-advance user!))
+	    (max-cursor-num 100))
+    (send-msg connect (with-output-to-string (stream) (format stream "max-obj-num ~a~%" (+ max-cursor-num (ceiling (* (/ window-width x-advance) (/ window-height y-advance)))))))))
+
+(defparameter *user-info-table* (make-hash-table :test 'eq))
+
+(set-msg-handle "login" user! text! (username-in width-in height-in font-size-in)
+  (setf state 'normal)
+  (setf username username-in)
+  (setf font (get-font "UbuntuMono-R"))
+  (setf font-size (read-from-string font-size-in))
+  (setf window-width (float (read-from-string width-in)))
+  (setf window-height (float (read-from-string height-in)))
+  (setf cursor-color #(0.0 0.2 0.0))
+  (link-user user! text!)
+
+  (format t "user login~%")
+  ;; (format t "width ~a height ~a received.~%" width height)
+  (print user!)
+
+  (send-max-size user!)
+  (send-text user! text!)
+  
+  ;; (print (print-text user! text!))
   )
 
-(defmacro deftransition (name &body body)
-  `(defobjfun ,name (userinfo!)
-     (objlet* ((current-state! current-state)
-	       (state-keys! state-keys)
-	       (key-event! key-event))
-       ,@body
-       (format t "(transition) ~(~a~)~%" (quote ,name)))))
+(defun map-alist-to-table (alist table)
+  (mapc (lambda (pair) (setf (gethash (car pair) table) (cdr pair)))
+	alist))
 
-(let ((transition-table (make-hash-table :test 'equalp)))
-  (defobjfun set-transition (key action transition)
-    (objlet* ((key-event! (make-key-event! :key key :action action)))
-      (setf (gethash key-event! transition-table) transition)))
+(defparameter *normal-state-draw-key-table* (make-hash-table :test 'eq))
+
+(defparameter *numbers* '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
+(defparameter *small-chars* '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z))
+(defparameter *normal-state-number-alist* (let ((i 47))
+			       (mapcar (lambda (c) (cons (incf i) c)) *numbers*)))
+(defparameter *normal-state-char-alist* (let ((i 64))
+				   (mapcar (lambda (c) (cons (incf i) c)) *small-chars*)))
+(defparameter *normal-state-other-draw-key-alist* '((32 . #\ ) (39 . #\') (44 . #\,) (45 . #\-) (46 . #\.) (47 . #\/) (59 . #\;) (60 . #\=) (91 . #\[) (92 . #\\) (93 . #\]) (96 . #\`)))
+
+(map-alist-to-table *normal-state-number-alist* *normal-state-draw-key-table*)
+(map-alist-to-table *normal-state-char-alist* *normal-state-draw-key-table*)
+(map-alist-to-table *normal-state-other-draw-key-alist* *normal-state-draw-key-table*)
+
+(defparameter *extend-state-draw-key-table* (make-hash-table :test 'eq))
+
+(defparameter *extended-numbers* '(#\) #\! #\@ #\# #\$ #\% #\^ #\& #\* #\())
+(defparameter *large-chars* '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z))
+(defparameter *extend-state-number-alist* (let ((i 47))
+			       (mapcar (lambda (c) (cons (incf i) c)) *extended-numbers*)))
+(defparameter *extend-state-char-alist* (let ((i 64))
+				   (mapcar (lambda (c) (cons (incf i) c)) *large-chars*)))
+(defparameter *extend-state-other-draw-key-alist* '((32 . #\ ) (39 . #\") (44 . #\<) (45 . #\_) (46 . #\>) (47 . #\?) (59 . #\:) (60 . #\+) (91 . #\{) (92 . #\|) (93 . #\}) (96 . #\~)))
+
+(map-alist-to-table *extend-state-number-alist* *extend-state-draw-key-table*)
+(map-alist-to-table *extend-state-char-alist* *extend-state-draw-key-table*)
+(map-alist-to-table *extend-state-other-draw-key-alist* *extend-state-draw-key-table*)
+
+(set-msg-handle "key-event" user! text! (key action)
+  ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
+  (let ((key (read-from-string key))
+	(action (read-from-string action)))
+    (case key
+      ;; shift
+      (340 (case action
+	     ((0 1) (case state
+		      ('normal (setf state 'extend))
+		      ('extend (setf state 'normal))))))
+      ;; control
+      (341 (case action
+	     (0 (setf state 'normal))
+	     (1 (setf state 'control))))
+      ;; capslock
+      (280 (case action
+	     (1 (case state
+		  ('normal (setf state 'extend))
+		  ('extend (setf state 'normal))))))
+      ;; enter
+      (257 (case action
+	     (1 (insert-new-line user! text!))))
+      ;; backspace
+      (259 (case action
+	     (1 (backspace user! text!))))
+      ;; tab
+      (258 (case action
+	     (1 )))
+      ;; right
+      (262 (case action
+	     (1 (move-right user! text!))))
+      ;; left
+      (263 (case action
+	     (1 (move-left user! text!))))
+      ;; up
+      (263 (case action
+	     (1 (move-up user! text!))))
+      ;; down
+      (264 (case action
+	     (1 (move-down user! text!))))
+      ;; draw
+      (otherwise (case action
+		   (1 (progn
+			(case state
+			  ('normal (if-let ((char (gethash key *normal-state-draw-key-table*)))
+				     (insert-char user! text! char)))
+			  ('extend (if-let ((char (gethash key *extend-state-draw-key-table*)))
+				     (insert-char user! text! char))))
+			
+			)))))
+    (case action
+      (1 (progn
+	   (objdolist (user! user-list)
+	     (send-text user! text!))
+	   ;; (format t "------------------------------------------------~%")
+	   ;; (print line-tree)
+	   ;; (terpri)
+	   )))
+    )
   
-  (defobjfun get-transition (key-event!)
-    (gethash key-event! transition-table))
-
-  (deftransition key-press
-    (cond ((eq state 'normal) (one-key current-state! key))
-	  ((eq state 'control) (add-key current-state! key))))
-
-  (deftransition key-release
-    (remove-key current-state! key))
+  ;; (print cursor-list)
+  ;; (print state)
   
-  (deftransition ctrl-press
-    (one-key current-state! key)
-    (setf state 'control))
+  (send-new-line connect))
 
-  (deftransition ctrl-release
-    (init-key current-state!)
-    (setf state 'normal))
+(set-msg-handle "resize-window" user! text! (width-in height-in)
+  (let ((width (float (read-from-string width-in)))
+	(height (float (read-from-string height-in))))    
+    (setf window-width width)
+    (setf window-height height)
+    (send-max-size user!)
+    (send-text user! text!)))
 
-  (set-transition 65 1 #'key-press)
-  (set-transition 65 0 #'key-release)
-  (set-transition 341 1 #'ctrl-press)
-  (set-transition 341 0 #'ctrl-release)
+(defmacro my-thread (form exit-form &rest cases)
+  `(sb-thread:make-thread
+    (lambda ()
+      (unwind-protect
+	   (handler-case
+	       ,form
+	     ,@cases)
+	,exit-form))))
 
-  (defun get-transition-table ()
-    transition-table))
+(defobjfun handle-msg (init-msg user! text!)
+  (let ((func (get-msg-handle init-msg)))
+    (if func
+	(funcall (get-msg-handle init-msg) user! text!)
+	(format t "handle for msg ~a not defined~%" init-msg))))
 
-(let ((char-map (make-hash-table)))
-  ;; init
-  ;; a-z
-  (mapcar #'(lambda (key)
-	      (setf (gethash key char-map) (code-char (+ key 32))))
-	  (iota 26 :start 65))
-  ;; 0-9
-  (mapcar #'(lambda (key)
-	      (setf (gethash key char-map) (code-char key)))
-	  (iota 10 :start 48))
+(defobjfun handle-connect (connect socket-stream-in text!)
+  (objlet* ((user! (make-user! :connect connect :socket-stream-in socket-stream-in)))
+    (my-thread
+     (loop
+       (let ((init-msg (read-line socket-stream-in)))
+	 (handle-msg init-msg user! text!)))
+     
+     ;; exit form
+     (progn
+       (format t "~%")
+       (format t "unlinking user and text~%")
+       (unlink-user user! text!)
+       (format t "(handle-connect) closing connect ~a~%" connect)
+       (sb-bsd-sockets:socket-close connect)
+       (format t "(handle-connect) exiting handle-connect thread for ~a~%" connect))
+     ;; handler cases
+     (end-of-file (o)
+		  ;; (format t "~a~%" o)
+		  )
+     (sb-int:simple-stream-error (o)))))
 
-  (defun get-char (key)
-    (gethash key char-map)))
+(defvar *socket* nil)
+(defvar *text* nil)
 
-(defmacro deffunc (name &body body)
-  `(defobjfun ,name (text-server! userinfo!)
-     (objlet* ((current-state! current-state)
-	       (state-keys! state-keys)
-	       (key-event! key-event))
-       ,@body
-       (format t "(func) ~(~a~)~%" (quote ,name)))))
+(defun run-server (&key (ip #(127 0 0 1)) (port 20741))
+  (setf *socket* (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
+  (setf *text* (create-text!))
+  (let ((out *standard-output*))
+    (my-thread
+     (progn
+       (setf (sb-bsd-sockets:sockopt-reuse-address *socket*) t)
+       (setf (sb-bsd-sockets:non-blocking-mode *socket*) t)
+       (sb-bsd-sockets:socket-bind *socket* ip port)
+       (sb-bsd-sockets:socket-listen *socket* 1)
 
-(let ((function-table (make-hash-table :test 'equalp)))
-  (defobjfun set-func (state keys func)
-    (objlet* ((state-keys! (make-state-keys! :state state :keys keys)))
-      (setf (gethash state-keys! function-table) func)))
+       (format out "server start listening to ~a~%" *socket*)
+       ;; wait for new connect
+       (loop
+	 (if-let ((connect (sb-bsd-sockets:socket-accept *socket*)))
+	   (let ((socket-stream-in (sb-bsd-sockets:socket-make-stream connect :input t)))
+	     (format t "new connect~%")
+	     (handle-connect connect socket-stream-in *text*)))))
+     ;; exit form
+     (progn
+       (format out "(run-text-server!) exiting server thread~%"))
+     ;; handler cases
+     (sb-bsd-sockets:bad-file-descriptor-error (o)
+					       ;; (format t "(run-text-server!) ~a~%" o)
+					       )
+     (sb-bsd-sockets:address-in-use-error (o)
+					  ;; (format t "(run-text-server!) ~a~%" o)
+					  )
+     )))
 
-  (defobjfun get-func (state-keys!)
-    (gethash state-keys! function-table))
-
-  (deffunc insert-key
-    (let ((key-1 (aref keys 0)))
-      (with-lock-held (text-lock)
-	(insert-char text-manager username (get-char key))
-	(print-text text-manager))))
-  
-  (set-func 'normal #(65 0 0 0 0 0 0 0 0 0) #'insert-key)
-  
-  )
-
-
-
-(defobjfun handle-msg (text-server! userinfo! msg)
-  (objlet* ((current-state! current-state))
-    (case (char msg 0)
-      (#\0 (progn
-	     (setf username (read-line stream))
-	     (format t "username : ~a~%" username)
-	     (push userinfo! userinfos)
-	     (init-cursors-manager! text-manager username)
-	     (sb-bsd-sockets:socket-send connect "login succeeded
-" nil)
-	     (format t "~a~%" userinfo!)))
-
-      (#\1 (progn
-	     (objlet* ((key-event! key-event))
-	       (setf key (parse-integer (read-line stream)))
-	       (setf action (parse-integer (read-line stream)))
-	       (format t "~%(~a) key : ~a, action : ~a~%" username key action))
-	     (let ((transition (get-transition key-event)))
-	       (when transition
-		 (funcall transition userinfo!)))
-	     
-	     (let ((func (get-func state-keys)))
-	       (when func
-		 (funcall func text-server! userinfo!)))
-
-	     (objlet* ((current-state! current-state)
-		       (state-keys! state-keys))
-	       (format t "(state) ~a~%(keys) ~a~%" state keys)))))))
-
-(defobjfun run-msg-handler (text-server! userinfo!)
-  (setf msg-handler
-	(sb-thread:make-thread
-	 (lambda ()
-	   (unwind-protect
-		(handler-case
-		    (loop
-		      (let ((msg (read-line stream)))
-			(handle-msg text-server! userinfo! msg)))
-		  (end-of-file (o) (format t "~a~%" o)))
-	     (progn
-	       (format t "(run-msg-handler) close connect~%")
-	       (sb-bsd-sockets:socket-close connect)
-	       ;; (remove-el userinfo! userinfos)
-	       ;; (remove-cursors-manager! text-manager username)
-	       (format t "(run-msg-handler) exiting msg-handler~%")))))))
-
-(objlet* ((text-server! nil))
-  (defobjfun run-text-server! (&optional (ip-in #(127 0 0 1)) (port-in 20741))
-    (setq text-server! (make-text-server! :ip ip-in :port port-in))
-    (init-text text-manager "temp path")
-    (setf server
-	  (sb-thread:make-thread
-	   (lambda ()
-	     (unwind-protect
-		  (handler-case
-		      (progn
-			;; socket config
-			(setf (sb-bsd-sockets:sockopt-reuse-address socket) nil)
-			(setf (sb-bsd-sockets:non-blocking-mode socket) t)
-			(sb-bsd-sockets:socket-bind socket ip port)
-			(sb-bsd-sockets:socket-listen socket 1)
-			;; wait for new connect
-			(loop
-			  (let ((connect (sb-bsd-sockets:socket-accept socket)))
-			    (when connect
-			      (format t "new connect~%")
-			      (objlet* ((userinfo! (make-userinfo! :connect connect :stream (sb-bsd-sockets:socket-make-stream connect :input t :output t))))
-				(run-msg-handler text-server! userinfo!))))))
-		    
-		    (sb-bsd-sockets:bad-file-descriptor-error (o) (format t "(run-text-server!) ~a~%" o))
-		    (sb-bsd-sockets:address-in-use-error (o) (format t "(run-text-server!) ~a~%" o))))
-	     (progn
-	       (format t "(run-text-server!) exiting server~%"))))))
-
-  (defun stop-text-server! ()
-    (format t "(stop-text-server!) close socket~%")
-    (sb-bsd-sockets:socket-close socket))
-
-  (defun get-text-server! ()
-    text-server!))
+(defun close-socket ()
+  (format t "(stop-text-server!) closing server listeing to ~a~%" *socket*)
+  (sb-bsd-sockets:socket-close *socket*))

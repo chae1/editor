@@ -1,12 +1,14 @@
-#include "src/vulkan/engine.h"
-#include "src/socket/socket_client.h"
+#include "engine.h"
+#include "socket_client.h"
 
 #include <glm/gtx/string_cast.hpp>
+
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
 #include <string>
 #include <sstream>
+#include <thread>
 
 using namespace vk_engine;
 using namespace socket_client;
@@ -22,7 +24,7 @@ int width = 500;
 int height = 400;
 int font_size = 40;
 
-Engine engine { width, height, "3dit", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
+Engine engine { width, height, "3d editor", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
 
 Socket_client& client = engine.client;
 
@@ -63,7 +65,8 @@ std::string get_token(std::stringstream& ss) {
 
 bool draw_flag = false;
 
-void parse_msg() {
+// listening thread alone will call this function
+void parse_msg_and_run_command() {
     std::stringstream ss(client.buf);
     std::string token = get_token(ss);
     
@@ -71,19 +74,18 @@ void parse_msg() {
 	token = get_token(ss);
 
 	if (token == "begin") {
-	    engine.objs.clear();
-	    
+	    engine.render_objs_mutex.lock();
+	    engine.render_objs.clear();	    
 	    draw_flag = true;
 	    
 	} else if (token == "end") {
-	    engine.updateStorageBuffer();
-	    // engine.storageBufferUpdateFlag = true;
-
+	    // engine.updateStorageBuffer();
+	    engine.storageBufferUpdateFlag = true;
+	    engine.render_objs_mutex.unlock();
 	    draw_flag = false;
 	}
-	
     } else {	
-	if (draw_flag) {	
+	if (draw_flag) {
 	    if (token == "char") {
 		char c;
 		float char_left, char_up, char_width, char_height;
@@ -99,19 +101,16 @@ void parse_msg() {
 		ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		ssbo.charId = engine.fontInfo.glyph_map[c];
 
-		engine.objs.push_back(ssbo);
+		engine.render_objs.push_back(ssbo);
 		
-		// fmt::print("{}\n", ssbo.charId);
-		
+		// fmt::print("{}\n", ssbo.charId);		
 	    } else if (token == "cursor") {
 		
 	    }
-	    
 	} else {
 	    if (token == "max-obj-num") {
 		ss >> engine.maxSsboCount;
-		engine.storageBufferRecreateFlag = true;
-		
+		engine.storageBufferRecreateFlag = true;		
 	    }
 	}
     }
@@ -120,7 +119,7 @@ void parse_msg() {
 void socket_listener() {
     while (1) {
 	client.read_msg();
-	parse_msg();
+	parse_msg_and_run_command();
     }
 }
 
