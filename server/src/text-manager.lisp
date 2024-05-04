@@ -244,7 +244,7 @@ chaewon -> ((tc,            (tc,         ..
 	      (- 1 (* (/ (+ (- window-height height-vacancy) y-advance) window-height) 2))
 	      (* (/ x-advance window-width) 2)
 	      (* (/ y-advance window-height) 2)))
-    (format t "char ~a window-width ~a width-vacancy ~a word-width ~a~%" char window-width width-vacancy word-width)
+    ;; (format t "char ~a window-width ~a width-vacancy ~a word-width ~a~%" char window-width width-vacancy word-width)
     (decf width-vacancy x-advance)
     (decf word-width x-advance)))
 
@@ -306,7 +306,7 @@ chaewon -> ((tc,            (tc,         ..
 	(objlet* ((char! (my-list:get-data word-end-cursor))
 		  (x-advance (get-x-advance user! char!)))
 	  (incf word-width x-advance)
-	  (format t "word-width ~a~%" word-width)
+	  ;; (format t "word-width ~a~%" word-width)
 	  (cond ((eq char #\ )
                  ;; move cursor to the character before #\ 
                  (my-list:move-cursor-to-prev char-list word-end-cursor)

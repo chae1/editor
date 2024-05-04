@@ -183,8 +183,8 @@ void Socket_client::read_msg() {
 	}
     }
 
-    fmt::print("begin {} end {}\n", temp_buf_unread_begin, temp_buf_unread_end);
-    std::cout << "read msg : " << buf << "\n";
+    // fmt::print("begin {} end {}\n", temp_buf_unread_begin, temp_buf_unread_end);
+    // std::cout << "read msg : " << buf << "\n";
 }
 
 bool Socket_client::recv_msg() {

@@ -1394,7 +1394,7 @@ void Engine::drawFrame() {
     } else if (framebufferResized && mouseLeftButtonPressed) {
 	fmt::print("recreateSwapChain\n");
 	recreateSwapChain(); // send resize-window message to server and recreate swapchain
-	framebufferResized = false;	    
+	framebufferResized = false;
 
     } else {
 	if (storageBufferRecreateFlag == true) {
