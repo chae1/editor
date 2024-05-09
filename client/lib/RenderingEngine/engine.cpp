@@ -1,6 +1,7 @@
 #include "engine.h"
 
 #include <GLFW/glfw3.h>
+#include <cstdint>
 #include <cstring>
 #include <vulkan/vulkan_core.h>
 #include <fstream>
@@ -8,6 +9,8 @@
 #include <string>
 #include <algorithm>
 #include <filesystem>
+#include <iostream>
+#include <set>
 
 using namespace vk_engine;
 namespace fs = std::filesystem;
@@ -57,7 +60,7 @@ std::vector<const char*> getRequiredExtensions() {
 
     return extensions;
 }
-
+	
 void Engine::createInstance() {
     if (enableValidationLayers && !checkValidationLayerSupport()) {
         throw std::runtime_error("validation layers requested, but not available");
@@ -575,7 +578,7 @@ void Engine::createRenderPass() {
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-     VkAttachmentDescription depthAttachment{};
+    VkAttachmentDescription depthAttachment{};
     depthAttachment.format = findDepthFormat();
     depthAttachment.samples = msaaSamples;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -756,7 +759,7 @@ void Engine::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryP
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create vertex buffer!");
+        throw std::runtime_error("failed to create buffer!");
     }
 
     VkMemoryRequirements memRequirements;
@@ -768,7 +771,7 @@ void Engine::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryP
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
     if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate vertex buffer memory!");
+        throw std::runtime_error("failed to allocate buffer memory!");
     }
 
     vkBindBufferMemory(device, buffer, bufferMemory, 0);
@@ -819,8 +822,32 @@ void Engine::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize siz
     endSingleTimeCommands(commandBuffer);
 }
 
-void Engine::createVertexBuffer() {
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+void Engine::createTriangleVertexBuffer() {
+    VkDeviceSize bufferSize = sizeof(TriangleVertex) * maxTriangleVertexCount;
+
+    createBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, triangleVertexBuffer, triangleVertexBufferMemory);
+    vkMapMemory(device, triangleVertexBufferMemory, 0, bufferSize, 0, &triangleVertexBufferMapped);
+}
+
+void Engine::updateTriangleVertexBuffer() {
+    VkDeviceSize bufferSize = sizeof(TriangleVertex) * triangleVertices.size();
+    memcpy(triangleVertexBufferMapped, triangleVertices.data(), bufferSize);
+}
+
+void Engine::createTriangleIndexBuffer() {
+    VkDeviceSize bufferSize = sizeof(uint32_t) * maxTriangleIndexCount;
+
+    createBuffer(bufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, triangleIndexBuffer, triangleIndexBufferMemory);
+    vkMapMemory(device, triangleIndexBufferMemory, 0, bufferSize, 0, &triangleIndexBufferMapped);
+}
+
+void Engine::updateTriangleIndexBuffer() {
+    VkDeviceSize bufferSize = sizeof(uint32_t) * triangleIndices.size();
+    memcpy(triangleVertexBufferMapped, triangleVertices.data(), bufferSize);
+}
+
+void Engine::createGlyphBoxVertexBuffer() {
+    VkDeviceSize bufferSize = sizeof(GlyphBoxVertex) * glyphBoxVertices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -828,19 +855,19 @@ void Engine::createVertexBuffer() {
 
     void* data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t) bufferSize);
+    memcpy(data, glyphBoxVertices.data(), (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, glyphBoxVertexBuffer, glyphBoxVertexBufferMemory);
 
-    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+    copyBuffer(stagingBuffer, glyphBoxVertexBuffer, bufferSize);
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void Engine::createIndexBuffer() {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+void Engine::createGlyphBoxIndexBuffer() {
+    VkDeviceSize bufferSize = sizeof(glyphBoxIndices[0]) * glyphBoxIndices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -848,75 +875,66 @@ void Engine::createIndexBuffer() {
 
     void* data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t) bufferSize);
+    memcpy(data, glyphBoxIndices.data(), (size_t)bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, glyphBoxIndexBuffer, glyphBoxIndexBufferMemory);
 
-    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+    copyBuffer(stagingBuffer, glyphBoxIndexBuffer, bufferSize);
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void Engine::createUniformBuffers() {
-    uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-    uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
-    uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+void Engine::createGlobalTransformMatrixUniformBuffers() {
+    globalTransformMatrixUniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    VkDeviceSize bufferSize = sizeof(TransformMatrixObject);
+    globalTransformMatrixUniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+    globalTransformMatrixUniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
-        vkMapMemory(device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
-
-	UniformBufferObject ubo{};
-	ubo.model = glm::mat4(1.0f);
-        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
-        ubo.proj[1][1] *= 1;
-
-	memcpy(uniformBuffersMapped[i], &ubo, sizeof(ubo));
+        createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, globalTransformMatrixUniformBuffers[i], globalTransformMatrixUniformBuffersMemory[i]);
+        vkMapMemory(device, globalTransformMatrixUniformBuffersMemory[i], 0, bufferSize, 0, &globalTransformMatrixUniformBuffersMapped[i]);
     }
 }
 
-void Engine::createStorageBuffer() {
-    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * maxSsboCount;
-    
-    createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, storageBuffer, storageBufferMemory);
-    vkMapMemory(device, storageBufferMemory, 0, bufferSize, 0, &storageBufferMapped);
+void Engine::updateGlobalTransformMatrixUniformBuffer(uint32_t currentFrame) {
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    TransformMatrixObject ubo{};
+    ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f + 0.0f * time, 3.0f), glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    ubo.proj = glm::perspective(glm::radians(45.0f), (float) swapChainExtent.width / swapChainExtent.height, 0.1f, 10.0f);
+    ubo.proj[1][1] *= -1;
+
+    memcpy(globalTransformMatrixUniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
 }
 
-void Engine::initStorageBuffer() {
-    render_objs.resize(static_cast<size_t>(ssboCount));
-    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;
+void Engine::createTextStorageBuffer() {
+    VkDeviceSize bufferSize = sizeof(CharacterObject) * maxCharacterCount;
     
-    StorageBufferObject ssbo{};
-    ssbo.model = glm::mat4(1.0f);
-    ssbo.view = glm::mat4(1.0f);
-    ssbo.proj = glm::mat4(1.0f);
-    ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    ssbo.charId = fontInfo.glyph_map['3'];
-    
-    render_objs[0] = ssbo;
-
-    memcpy(storageBufferMapped, render_objs.data(), bufferSize);
+    createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, textStorageBuffer, textStorageBufferMemory);
+    vkMapMemory(device, textStorageBufferMemory, 0, bufferSize, 0, &textStorageBufferMapped);
 }
 
-void Engine::updateStorageBuffer() {
-    ssboCount = render_objs.size();
-    VkDeviceSize bufferSize = sizeof(StorageBufferObject) * ssboCount;
-    memcpy(storageBufferMapped, render_objs.data(), bufferSize);
+void Engine::updateTextStorageBuffer() {
+    characterCount = characterObjects.size();
+    VkDeviceSize bufferSize = sizeof(CharacterObject) * characterCount;
+    memcpy(textStorageBufferMapped, characterObjects.data(), bufferSize);
 }
 
-void Engine::recreateStorageBuffer() {
+void Engine::recreateTextStorageBuffer() {
     vkDeviceWaitIdle(device);
-    vkDestroyBuffer(device, storageBuffer, nullptr);
-    vkFreeMemory(device, storageBufferMemory, nullptr);
-    createStorageBuffer();
-    updateDescriptorSets();
+    vkDestroyBuffer(device, textStorageBuffer, nullptr);
+    vkFreeMemory(device, textStorageBufferMemory, nullptr);
+    createTextStorageBuffer();
+    updateTextDescriptorSets();
 }
 
-void Engine::createGlyphBuffers() {
+void Engine::createFontInfoStorageBuffer() {
     std::vector<void*> buffersData {
 	fontInfo.split_left_offset_buffer.data(),
 	fontInfo.split_left_size_buffer.data(),
@@ -934,28 +952,8 @@ void Engine::createGlyphBuffers() {
 	fontInfo.size_buffer.data(),
 	fontInfo.curve_buffer.data()
     };
-
-    glyphBuffersElementSize = std::vector<uint32_t> { sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve), sizeof(int), sizeof(int), sizeof(Curve) };
     
-    glyphBuffersLength = std::vector<size_t> {
-	fontInfo.split_left_offset_buffer.size(),
-	fontInfo.split_left_size_buffer.size(),
-	fontInfo.split_left_curve_buffer.size(),
-	fontInfo.split_right_offset_buffer.size(),
-	fontInfo.split_right_size_buffer.size(),
-	fontInfo.split_right_curve_buffer.size(),
-	fontInfo.split_up_offset_buffer.size(),
-	fontInfo.split_up_size_buffer.size(),
-	fontInfo.split_up_curve_buffer.size(),
-	fontInfo.split_down_offset_buffer.size(),
-	fontInfo.split_down_size_buffer.size(),
-	fontInfo.split_down_curve_buffer.size(),
-	fontInfo.offset_buffer.size(),
-	fontInfo.size_buffer.size(),
-	fontInfo.curve_buffer.size()
-    };
-    
-    std::vector<VkDeviceSize> buffersSize = {
+    fontInfoStorageBuffersSize = std::vector<VkDeviceSize> {
 	sizeof(int) * fontInfo.split_left_offset_buffer.size(),
 	sizeof(int) * fontInfo.split_left_size_buffer.size(),
 	sizeof(Curve) * fontInfo.split_left_curve_buffer.size(),
@@ -973,92 +971,141 @@ void Engine::createGlyphBuffers() {
 	sizeof(Curve) * fontInfo.curve_buffer.size()
     };
 
-    size_t bufSize = buffersData.size();
+    size_t bufferSize = buffersData.size();
 
-    glyphBuffers.resize(bufSize);
-    glyphBuffersMemory.resize(bufSize);
-    glyphBuffersSize = buffersSize;
+    fontInfoStorageBuffers.resize(bufferSize);
+    fontInfoStorageBuffersMemory.resize(bufferSize);
     
-    for (size_t i = 0; i < bufSize; i++) {
+    for (size_t i = 0; i < bufferSize; i++) {
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	createBuffer(buffersSize[i], VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+	createBuffer(fontInfoStorageBuffersSize[i], VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 	void* data;
-	vkMapMemory(device, stagingBufferMemory, 0, buffersSize[i], 0, &data);
-	memcpy(data, buffersData[i], (size_t) buffersSize[i]);
+	vkMapMemory(device, stagingBufferMemory, 0, fontInfoStorageBuffersSize[i], 0, &data);
+	memcpy(data, buffersData[i], (size_t)fontInfoStorageBuffersSize[i]);
 	vkUnmapMemory(device, stagingBufferMemory);
 
-	createBuffer(buffersSize[i], VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, glyphBuffers[i], glyphBuffersMemory[i]);
-	copyBuffer(stagingBuffer, glyphBuffers[i], buffersSize[i]);
+	createBuffer(fontInfoStorageBuffersSize[i], VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, fontInfoStorageBuffers[i], fontInfoStorageBuffersMemory[i]);
+	copyBuffer(stagingBuffer, fontInfoStorageBuffers[i], fontInfoStorageBuffersSize[i]);
 
 	vkDestroyBuffer(device, stagingBuffer, nullptr);
 	vkFreeMemory(device, stagingBufferMemory, nullptr);
     }
 }
 
-void Engine::createDescriptorSetLayout() {
+void Engine::createTriangleDescriptorSetLayout() {
+    std::vector<VkDescriptorSetLayoutBinding> bindings {
+	{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }
+    };
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(bindings.size()), bindings.data() };
+
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &triangleDescriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create triangle descriptor set layout!");
+    }
+}
+
+void Engine::createTriangleDescriptorPool() {
+    std::vector<VkDescriptorPoolSize> poolSizes {
+	{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) }
+    };
+
+    VkDescriptorPoolCreateInfo poolInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), static_cast<uint32_t>(poolSizes.size()), poolSizes.data() };
+
+    if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &triangleDescriptorPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create triangle descriptor pool!");
+    }
+}
+
+void Engine::allocateTriangleDescriptorSets() {
+    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, triangleDescriptorSetLayout);
+     
+    VkDescriptorSetAllocateInfo allocInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, triangleDescriptorPool, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), layouts.data() };
+
+    triangleDescriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+    if (vkAllocateDescriptorSets(device, &allocInfo, triangleDescriptorSets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate triangle descriptor sets!");
+    }
+}
+
+void Engine::updateTriangleDescriptorSets() {
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+	std::vector<VkDescriptorBufferInfo> bufferInfo {
+	    { globalTransformMatrixUniformBuffers[i], 0, sizeof(TransformMatrixObject) }
+	};
+
+	std::vector<VkWriteDescriptorSet> descriptorWrites {
+	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, triangleDescriptorSets[i], 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &bufferInfo[0], nullptr }
+	};
+	
+        vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    }
+}
+
+void Engine::createTextDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {
 	{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
 	{ 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }
     };
     
-    for (size_t i = 0; i < glyphBuffers.size(); i++) {
+    for (size_t i = 0; i < fontInfoStorageBuffers.size(); i++) {
 	bindings.push_back({ static_cast<uint32_t>(i + 2), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr });
     }
     
-    VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(bindings.size()), bindings.data() };
+    VkDescriptorSetLayoutCreateInfo layoutInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(bindings.size()), bindings.data() };
 
-    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor set layout!");
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &textDescriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create text descriptor set layout!");
     }
 }
 
-void Engine::createDescriptorPool() {
-    std::vector<VkDescriptorPoolSize> poolSizes{
+void Engine::createTextDescriptorPool() {
+    std::vector<VkDescriptorPoolSize> poolSizes {
 	{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) },
 	{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) }
     };
 
-    for (size_t i = 0; i < glyphBuffers.size(); i++) {
+    for (size_t i = 0; i < fontInfoStorageBuffers.size(); i++) {
 	poolSizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) });
     }
 
-    VkDescriptorPoolCreateInfo poolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), static_cast<uint32_t>(poolSizes.size()), poolSizes.data() };
+    VkDescriptorPoolCreateInfo poolInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), static_cast<uint32_t>(poolSizes.size()), poolSizes.data() };
 
-    if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor pool!");
+    if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &textDescriptorPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create text descriptor pool!");
     }
 }
 
-void Engine::allocateDescriptorSets() {
-    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
-    VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, descriptorPool, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), layouts.data() };
+void Engine::allocateTextDescriptorSets() {
+    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, textDescriptorSetLayout);
+    
+    VkDescriptorSetAllocateInfo allocInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, textDescriptorPool, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT), layouts.data() };
 
-    descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-    if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
+    textDescriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+    if (vkAllocateDescriptorSets(device, &allocInfo, textDescriptorSets.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate text descriptor sets!");
     }
 }
 
-void Engine::updateDescriptorSets() {
+void Engine::updateTextDescriptorSets() {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-	std::vector<VkDescriptorBufferInfo> buffersInfo {
-	    { uniformBuffers[i], 0, sizeof(UniformBufferObject) },
-	    { storageBuffer, 0, sizeof(StorageBufferObject) * maxSsboCount }
+	std::vector<VkDescriptorBufferInfo> bufferInfo {
+	    { globalTransformMatrixUniformBuffers[i], 0, sizeof(TransformMatrixObject) },
+	    { textStorageBuffer, 0, sizeof(CharacterObject) * maxCharacterCount }
 	};
 
-	for (size_t j = 0; j < glyphBuffers.size(); j++) {
-	    buffersInfo.push_back({ glyphBuffers[j], 0, glyphBuffersSize[j] });
+	for (size_t j = 0; j < fontInfoStorageBuffers.size(); j++) {
+	    bufferInfo.push_back({ fontInfoStorageBuffers[j], 0, fontInfoStorageBuffersSize[j] });
 	}
 
 	std::vector<VkWriteDescriptorSet> descriptorWrites {
-	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &buffersInfo[0], nullptr },
-	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &buffersInfo[1], nullptr }
+	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, textDescriptorSets[i], 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &bufferInfo[0], nullptr },
+	    { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, textDescriptorSets[i], 1, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &bufferInfo[1], nullptr }
 	};
 	
-	for (size_t j = 0; j < glyphBuffers.size(); j++) {
-	    descriptorWrites.push_back({ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSets[i], static_cast<uint32_t>(j + 2), 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &buffersInfo[j + 2], nullptr });
+	for (size_t j = 0; j < fontInfoStorageBuffers.size(); j++) {
+	    descriptorWrites.push_back({ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, textDescriptorSets[i], static_cast<uint32_t>(j + 2), 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, nullptr, &bufferInfo[j + 2], nullptr });
 	}
 	
         vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
@@ -1098,7 +1145,7 @@ VkShaderModule Engine::createShaderModule(const std::vector<char>& code) {
     return shaderModule;
 }
 
-void Engine::createGraphicsPipeline() {
+void Engine::createTextGraphicsPipeline() {
     auto vertShaderCode = readFile(std::filesystem::current_path().string() + "/lib/RenderingEngine/vert.spv");
     auto fragShaderCode = readFile(std::filesystem::current_path().string() + "/lib/RenderingEngine/frag.spv");
 
@@ -1130,12 +1177,12 @@ void Engine::createGraphicsPipeline() {
     dynamicState.pDynamicStates = dynamicStates.data();
 
     std::vector<VkVertexInputBindingDescription> bindingDescriptions = {
-	VkVertexInputBindingDescription{ 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX }
+	VkVertexInputBindingDescription{ 0, sizeof(GlyphBoxVertex), VK_VERTEX_INPUT_RATE_VERTEX }
     };
 
     std::vector<VkVertexInputAttributeDescription> bindingAttributes = {
-	VkVertexInputAttributeDescription{ 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex, pos) },
-	VkVertexInputAttributeDescription{ 1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord) }
+	VkVertexInputAttributeDescription{ 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(GlyphBoxVertex, pos) },
+	VkVertexInputAttributeDescription{ 1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(GlyphBoxVertex, texCoord) }
     };
     
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
@@ -1227,11 +1274,11 @@ void Engine::createGraphicsPipeline() {
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.pSetLayouts = &textDescriptorSetLayout;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &textPipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -1248,13 +1295,13 @@ void Engine::createGraphicsPipeline() {
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.layout = textPipelineLayout;
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
 
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &textGraphicsPipeline) != VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
 
@@ -1325,12 +1372,12 @@ void Engine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIn
     renderPassInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, textGraphicsPipeline);
 
-    VkBuffer vertexBuffers[] = {vertexBuffer};
+    VkBuffer glyphBoxVertexBuffers[] = {glyphBoxVertexBuffer};
     VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, glyphBoxVertexBuffers, offsets);
+    vkCmdBindIndexBuffer(commandBuffer, glyphBoxIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -1346,8 +1393,8 @@ void Engine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIn
     scissor.extent = swapChainExtent;
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), ssboCount, 0, 0, 0);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, textPipelineLayout, 0, 1, &textDescriptorSets[currentFrame], 0, nullptr);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(glyphBoxIndices.size()), characterCount, 0, 0, 0);
     // vkCmdDraw(commandBuffer, 3, 1, 0, 0);
     
     vkCmdEndRenderPass(commandBuffer);
@@ -1357,24 +1404,9 @@ void Engine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIn
     }
 }
 
-void Engine::updateUniformBuffer(uint32_t currentFrame) {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-    UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), 0.0f * time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(0.0f, 0.0f + 0.0f * time, 3.0f), glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), (float) swapChainExtent.width / swapChainExtent.height, 0.1f, 10.0f);
-    ubo.proj[1][1] *= -1;
-
-    memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
-}
-
 void Engine::drawFrame() {
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-    render_objs_mutex.lock();
+    textStorageBufferMutex.lock();
     
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
@@ -1397,25 +1429,25 @@ void Engine::drawFrame() {
 	framebufferResized = false;
 
     } else {
-	if (storageBufferRecreateFlag == true) {
+	if (textStorageBufferRecreateFlag == true) {
 	    fmt::print("recreate storage buffer\n");	
-	    recreateStorageBuffer();
-	
-	    storageBufferRecreateFlag = false;
+	    recreateTextStorageBuffer();
+	    
+	    textStorageBufferRecreateFlag = false;
 	}
 
-	if (storageBufferUpdateFlag == true) {
+	if (textStorageBufferUpdateFlag == true) {
 	    fmt::print("update storage buffer\n");	
-	    updateStorageBuffer();
+	    updateTextStorageBuffer();
 	
-	    storageBufferUpdateFlag = false;
+	    textStorageBufferUpdateFlag = false;
 	}
 
 	vkResetFences(device, 1, &inFlightFences[currentFrame]);
 	vkResetCommandBuffer(commandBuffers[currentFrame], 0);
 	recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
 
-	updateUniformBuffer(currentFrame);
+	updateGlobalTransformMatrixUniformBuffer(currentFrame);
 
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1441,7 +1473,7 @@ void Engine::drawFrame() {
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
 
-	VkSwapchainKHR swapChains[] = {swapChain};
+	VkSwapchainKHR swapChains[] = { swapChain };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
 	presentInfo.pImageIndices = &imageIndex;
@@ -1459,5 +1491,5 @@ void Engine::drawFrame() {
 	currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
-    render_objs_mutex.unlock();
+    textStorageBufferMutex.unlock();
 }

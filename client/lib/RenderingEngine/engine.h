@@ -1,13 +1,8 @@
 #pragma once
 
-#include <iostream>
-#include <thread>
+#include <cstdint>
 #include <vector>
 #include <optional>
-#include <set>
-#include <string>
-#include <array>
-#include <algorithm>
 #include <mutex>
 
 #include <fmt/core.h>
@@ -67,16 +62,21 @@ namespace vk_engine {
 	std::vector<VkPresentModeKHR> presentModes;
     };
     
-    struct Vertex {
+    struct GlyphBoxVertex {
 	glm::vec4 pos;
 	glm::vec2 texCoord;
 
-	bool operator==(const Vertex& other) const {
+	bool operator==(const GlyphBoxVertex& other) const {
             return pos == other.pos && texCoord == other.texCoord;
 	}
     };
+
+    struct TriangleVertex {
+	glm::vec4 pos;
+	glm::vec4 color;
+    };
     
-    struct StorageBufferObject {
+    struct CharacterObject {
 	alignas(16) glm::mat4 model;
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
@@ -84,7 +84,7 @@ namespace vk_engine {
 	alignas(16) int charId;
     };
     
-    struct UniformBufferObject {
+    struct TransformMatrixObject {
 	glm::mat4 model;
 	glm::mat4 view;
 	glm::mat4 proj;
@@ -122,31 +122,44 @@ namespace vk_engine {
 	    createLogicalDevice();
 
 	    createSwapChain();
-	    createImageViews();   
-	    createRenderPass();
+	    createImageViews();
 
+	    createRenderPass();
+	    
 	    createColorResources();
-	    createDepthResources();	    
+	    createDepthResources();
 	    createFramebuffers();
 	    
 	    createCommandPool();
 	    createCommandBuffers();
 
-	    createVertexBuffer();
-	    createIndexBuffer();
+	    createGlobalTransformMatrixUniformBuffers();
 
-	    createStorageBuffer();
-	    initStorageBuffer();
+	    createTriangleVertexBuffer();
+	    createTriangleIndexBuffer();
 	    
-	    createUniformBuffers();
-	    createGlyphBuffers();
+	    createGlyphBoxVertexBuffer();
+	    createGlyphBoxIndexBuffer();
+
+	    createTextStorageBuffer();
+	    updateTextStorageBuffer();
+
+	    // glyphs' bezier curves information for vector rendering
+	    createFontInfoStorageBuffer();
 	    
-	    createDescriptorSetLayout();
-	    createDescriptorPool();
-	    allocateDescriptorSets();
-	    updateDescriptorSets();
+	    createTriangleDescriptorSetLayout();
+	    createTriangleDescriptorPool();
+	    allocateTriangleDescriptorSets();
+	    updateTriangleDescriptorSets();
+
+	    createTextDescriptorSetLayout();
+	    createTextDescriptorPool();
+	    allocateTextDescriptorSets();
+	    updateTextDescriptorSets();
 	    
-	    createGraphicsPipeline();
+	    // createTriangleGraphicsPipeline();
+	    createTextGraphicsPipeline();    
+	    
 	    createSyncObjects();
 	}
 	
@@ -154,31 +167,39 @@ namespace vk_engine {
 	    main_loop();
 	    clean_up();
 	}
-
-	void recreateStorageBuffer();
-	void updateStorageBuffer();
 	
 	Socket_client client;
 	FontInfo fontInfo;
-
 	GLFWwindow* window;
-	
-	int maxSsboCount = 1;
-	int ssboCount = 1;
 
-	std::mutex render_objs_mutex;
-	std::vector<StorageBufferObject> render_objs;
+	std::mutex triangleVertexBufferMutex;
+
+	std::vector<TriangleVertex> triangleVertices;
+	int maxTriangleVertexCount = 100;
+	int triangleVertexCount;
+	
+	std::vector<uint32_t> triangleIndices;
+	int maxTriangleIndexCount = 100;
+	int triangleIndexCount;
+	
+	std::mutex textStorageBufferMutex;
+
+	std::vector<CharacterObject> characterObjects;
+	int maxCharacterCount = 1;
+	int characterCount = 0;
 	
 	bool framebufferResized = false;
 	bool mouseLeftButtonPressed = false;
-	bool storageBufferRecreateFlag = false;
-	bool storageBufferUpdateFlag = false;
+
+	bool triangleVertexBufferUpdateFlag = false;
+
+	bool textStorageBufferUpdateFlag = false;
+	bool textStorageBufferRecreateFlag = false;
 	
     private:
 	void (*socket_listener)();
 	void (*recreateSwapChainCallback)();
 	
-
 	VkInstance instance;
 	VkSurfaceKHR surface;
 	VkDebugUtilsMessengerEXT debugMessenger;
@@ -207,52 +228,67 @@ namespace vk_engine {
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
 
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;	
+	VkPipelineLayout trianglePipelineLayout;
+	VkPipeline triangleGraphicsPipeline;
+
+	VkPipelineLayout textPipelineLayout;
+	VkPipeline textGraphicsPipeline;
 
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 	
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
 	
-	const std::vector<Vertex> vertices {
+	VkBuffer triangleVertexBuffer;
+	VkDeviceMemory triangleVertexBufferMemory;
+	void* triangleVertexBufferMapped;
+	
+	VkBuffer triangleIndexBuffer;
+	VkDeviceMemory triangleIndexBufferMemory;
+	void* triangleIndexBufferMapped;
+
+	const std::vector<GlyphBoxVertex> glyphBoxVertices {
 	    { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
 	    { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
 	    { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
 	    { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }
 	};
 
-	VkBuffer vertexBuffer;
-	VkDeviceMemory vertexBufferMemory;
-	
-	VkBuffer storageBuffer;
-	VkDeviceMemory storageBufferMemory;
-	void* storageBufferMapped;
+	VkBuffer glyphBoxVertexBuffer;
+	VkDeviceMemory glyphBoxVertexBufferMemory;
 
-	const std::vector<uint32_t> indices {
+	const std::vector<uint32_t> glyphBoxIndices {
 	    0, 1, 3, 1, 2, 3
 	};
 	
-	VkBuffer indexBuffer;
-	VkDeviceMemory indexBufferMemory;
+	VkBuffer glyphBoxIndexBuffer;
+	VkDeviceMemory glyphBoxIndexBufferMemory;
 
-	std::vector<VkBuffer> uniformBuffers;
-	std::vector<VkDeviceMemory> uniformBuffersMemory;
-	std::vector<void*> uniformBuffersMapped;
+	// vector size will be MAX_FRAMES_IN_FLIGHT
+	std::vector<VkBuffer> globalTransformMatrixUniformBuffers;
+	std::vector<VkDeviceMemory> globalTransformMatrixUniformBuffersMemory;
+	std::vector<void*> globalTransformMatrixUniformBuffersMapped;
+
+	VkBuffer textStorageBuffer;
+	VkDeviceMemory textStorageBufferMemory;
+	void* textStorageBufferMapped;
+
+	std::vector<VkBuffer> fontInfoStorageBuffers;
+	std::vector<VkDeviceMemory> fontInfoStorageBuffersMemory;
+	std::vector<VkDeviceSize> fontInfoStorageBuffersSize;
 	
-	std::vector<VkBuffer> glyphBuffers;
-	std::vector<VkDeviceMemory> glyphBuffersMemory;
-	std::vector<uint32_t> glyphBuffersElementSize;
-	std::vector<size_t> glyphBuffersLength;
-	std::vector<VkDeviceSize> glyphBuffersSize;
+	VkDescriptorSetLayout triangleDescriptorSetLayout;
+	VkDescriptorPool triangleDescriptorPool;
+	std::vector<VkDescriptorSet> triangleDescriptorSets;
 	
-	VkDescriptorSetLayout descriptorSetLayout;
-	VkDescriptorPool descriptorPool;
-	std::vector<VkDescriptorSet> descriptorSets;
-	
+	VkDescriptorSetLayout textDescriptorSetLayout;
+	VkDescriptorPool textDescriptorPool;
+	std::vector<VkDescriptorSet> textDescriptorSets;
+ 
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
+
 	uint32_t currentFrame = 0;
 		
 	void main_loop() {
@@ -269,26 +305,39 @@ namespace vk_engine {
 	void clean_up() {
 	    cleanupSwapChain();
 
-	    vkDestroyPipeline(device, graphicsPipeline, nullptr);
-            vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-	    vkDestroyRenderPass(device, renderPass, nullptr);
+	    vkDestroyPipeline(device, triangleGraphicsPipeline, nullptr);
+            vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr);
 
-	    vkDestroyBuffer(device, storageBuffer, nullptr);
-	    vkFreeMemory(device, storageBufferMemory, nullptr);
+	    vkDestroyPipeline(device, textGraphicsPipeline, nullptr);
+            vkDestroyPipelineLayout(device, textPipelineLayout, nullptr);
+	    
+	    vkDestroyRenderPass(device, renderPass, nullptr);
+   
+	    vkFreeMemory(device, textStorageBufferMemory, nullptr);
+	    vkDestroyBuffer(device, textStorageBuffer, nullptr);
 	    
 	    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
-		vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+		vkDestroyBuffer(device, globalTransformMatrixUniformBuffers[i], nullptr);
+		vkFreeMemory(device, globalTransformMatrixUniformBuffersMemory[i], nullptr);
             }
 	    
-	    vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-            vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+	    vkDestroyDescriptorPool(device, triangleDescriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(device, triangleDescriptorSetLayout, nullptr);
 
-	    vkDestroyBuffer(device, indexBuffer, nullptr);
-            vkFreeMemory(device, indexBufferMemory, nullptr);
+	    vkDestroyDescriptorPool(device, textDescriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(device, textDescriptorSetLayout, nullptr);
 
-            vkDestroyBuffer(device, vertexBuffer, nullptr);
-            vkFreeMemory(device, vertexBufferMemory, nullptr);
+	    vkDestroyBuffer(device, triangleIndexBuffer, nullptr);
+            vkFreeMemory(device, triangleIndexBufferMemory, nullptr);
+
+            vkDestroyBuffer(device, glyphBoxVertexBuffer, nullptr);
+            vkFreeMemory(device, glyphBoxVertexBufferMemory, nullptr);
+	    
+	    vkDestroyBuffer(device, glyphBoxIndexBuffer, nullptr);
+            vkFreeMemory(device, glyphBoxIndexBufferMemory, nullptr);
+
+            vkDestroyBuffer(device, glyphBoxVertexBuffer, nullptr);
+            vkFreeMemory(device, glyphBoxVertexBufferMemory, nullptr);
 
 	    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
@@ -319,7 +368,9 @@ namespace vk_engine {
 	VkSampleCountFlagBits getMaxUsableSampleCount();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
+
 	void createSwapChain();
+	void recreateSwapChain();
 
 	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void createImageViews();
@@ -338,6 +389,7 @@ namespace vk_engine {
 
 	void createCommandPool();
 	void createCommandBuffers();
+	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
@@ -345,29 +397,41 @@ namespace vk_engine {
 	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	
-	void createVertexBuffer();
-	void createIndexBuffer();
-	// transition
-	void createUniformBuffers();
-	// characters
-	void createStorageBuffer();
-	void initStorageBuffer();
-	// font
-	void createGlyphBuffers();
+	void createTriangleVertexBuffer();
+	void updateTriangleVertexBuffer();
 	
-	void createDescriptorSetLayout();
-	void createDescriptorPool();
-	void allocateDescriptorSets();
-	void updateDescriptorSets();
+	void createTriangleIndexBuffer();
+	void updateTriangleIndexBuffer();
+
+	void createGlyphBoxVertexBuffer();
+	void createGlyphBoxIndexBuffer();
+
+	void createGlobalTransformMatrixUniformBuffers();
+	void updateGlobalTransformMatrixUniformBuffer(uint32_t currentImage);
+
+	void createTextStorageBuffer();
+	void updateTextStorageBuffer();
+	void recreateTextStorageBuffer();
+
+	void createFontInfoStorageBuffer();
+	
+	void createTriangleDescriptorSetLayout();
+	void createTriangleDescriptorPool();
+	void allocateTriangleDescriptorSets();
+	void updateTriangleDescriptorSets();
+
+	void createTextDescriptorSetLayout();
+	void createTextDescriptorPool();
+	void allocateTextDescriptorSets();
+	void updateTextDescriptorSets();
 
 	VkShaderModule createShaderModule(const std::vector<char>& code);
-	void createGraphicsPipeline();
+
+	void createTriangleGraphicsPipeline();
+	void createTextGraphicsPipeline();
+
 	void createSyncObjects();
 
-	void recreateSwapChain();
-	void updateUniformBuffer(uint32_t currentImage);
-
-	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 	void drawFrame();
     };
 }

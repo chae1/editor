@@ -24,7 +24,7 @@ int width = 500;
 int height = 400;
 int font_size = 40;
 
-Engine engine { width, height, "3d editor", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
+Engine engine { width, height, "editor", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
 
 Socket_client& client = engine.client;
 
@@ -74,14 +74,14 @@ void parse_msg_and_run_command() {
 	token = get_token(ss);
 
 	if (token == "begin") {
-	    engine.render_objs_mutex.lock();
-	    engine.render_objs.clear();	    
+	    engine.textStorageBufferMutex.lock();
+	    engine.characterObjects.clear();	    
 	    draw_flag = true;
 	    
 	} else if (token == "end") {
 	    // engine.updateStorageBuffer();
-	    engine.storageBufferUpdateFlag = true;
-	    engine.render_objs_mutex.unlock();
+	    engine.textStorageBufferUpdateFlag = true;
+	    engine.textStorageBufferMutex.unlock();
 	    draw_flag = false;
 	}
     } else {	
@@ -94,14 +94,14 @@ void parse_msg_and_run_command() {
 		// fmt::print("{}, {}, {}, {}\n", char_left, char_up, char_width, char_height);
 		// fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_left + char_width/2.0f, char_up + char_height/2.0f, 1.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
 		
-		StorageBufferObject ssbo;
+		CharacterObject ssbo;
 		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(char_left, char_up, 0.1f)) * glm::scale(glm::mat4(1.0f), glm::vec3(char_width/2.0f, char_height/2.0f, 0.1f));
 		ssbo.view = glm::mat4(1.0f);
 		ssbo.proj = glm::mat4(1.0f);
 		ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		ssbo.charId = engine.fontInfo.glyph_map[c];
 
-		engine.render_objs.push_back(ssbo);
+		engine.characterObjects.push_back(ssbo);
 		
 		// fmt::print("{}\n", ssbo.charId);		
 	    } else if (token == "cursor") {
@@ -109,8 +109,8 @@ void parse_msg_and_run_command() {
 	    }
 	} else {
 	    if (token == "max-obj-num") {
-		ss >> engine.maxSsboCount;
-		engine.storageBufferRecreateFlag = true;		
+		ss >> engine.maxCharacterCount;
+		engine.textStorageBufferRecreateFlag = true;
 	    }
 	}
     }
