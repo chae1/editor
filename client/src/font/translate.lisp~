@@ -1,3 +1,0 @@
-(defun translate (str)
-  (let ((sstream (make-string-input-stream str)))
-    (format t "~a" (read-line sstream))))

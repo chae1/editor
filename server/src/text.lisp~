@@ -1,6 +1,0 @@
-(defpackage my-text
-  (:nicknames :my-text)
-  (:use :common-lisp :my-utils :defobj))
-
-(in-package :my-text)
-

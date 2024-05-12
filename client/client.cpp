@@ -1,12 +1,14 @@
-#include "src/vulkan/engine.h"
-#include "src/socket/socket_client.h"
+#include "engine.h"
+#include "socket_client.h"
 
 #include <glm/gtx/string_cast.hpp>
+
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
 #include <string>
 #include <sstream>
+#include <thread>
 
 using namespace vk_engine;
 using namespace socket_client;
@@ -22,7 +24,7 @@ int width = 500;
 int height = 400;
 int font_size = 40;
 
-Engine engine { width, height, "3dit", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
+Engine engine { width, height, "editor", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
 
 Socket_client& client = engine.client;
 
@@ -63,7 +65,8 @@ std::string get_token(std::stringstream& ss) {
 
 bool draw_flag = false;
 
-void parse_msg() {
+// listening thread alone will call this function
+void parse_msg_and_run_command() {
     std::stringstream ss(client.buf);
     std::string token = get_token(ss);
     
@@ -71,47 +74,43 @@ void parse_msg() {
 	token = get_token(ss);
 
 	if (token == "begin") {
-	    engine.objs.clear();
-	    
+	    engine.textStorageBufferMutex.lock();
+	    engine.characterObjects.clear();	    
 	    draw_flag = true;
 	    
 	} else if (token == "end") {
-	    engine.updateStorageBuffer();
-	    // engine.storageBufferUpdateFlag = true;
-
+	    // engine.updateStorageBuffer();
+	    engine.textStorageBufferUpdateFlag = true;
+	    engine.textStorageBufferMutex.unlock();
 	    draw_flag = false;
 	}
-	
     } else {	
-	if (draw_flag) {	
+	if (draw_flag) {
 	    if (token == "char") {
 		char c;
 		float char_left, char_up, char_width, char_height;
 		ss >> c >> char_left >> char_up >> char_width >> char_height;
 
-		// fmt::print("{}, {}, {}, {}\n", char_left, char_up, char_width, char_height);
-		// fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_left + char_width/2.0f, char_up + char_height/2.0f, 1.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
+		fmt::print("{}, {}, {}, {}\n", char_left, char_up, char_width, char_height);
+		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_left + char_width/2.0f, char_up + char_height/2.0f, 1.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
 		
-		StorageBufferObject ssbo;
+		CharacterObject ssbo;
 		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(char_left, char_up, 0.1f)) * glm::scale(glm::mat4(1.0f), glm::vec3(char_width/2.0f, char_height/2.0f, 0.1f));
 		ssbo.view = glm::mat4(1.0f);
 		ssbo.proj = glm::mat4(1.0f);
 		ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		ssbo.charId = engine.fontInfo.glyph_map[c];
 
-		engine.objs.push_back(ssbo);
+		engine.characterObjects.push_back(ssbo);
 		
-		// fmt::print("{}\n", ssbo.charId);
-		
+		// fmt::print("{}\n", ssbo.charId);		
 	    } else if (token == "cursor") {
 		
 	    }
-	    
 	} else {
 	    if (token == "max-obj-num") {
-		ss >> engine.maxSsboCount;
-		engine.storageBufferRecreateFlag = true;
-		
+		ss >> engine.maxCharacterCount;
+		engine.textStorageBufferRecreateFlag = true;
 	    }
 	}
     }
@@ -120,7 +119,7 @@ void parse_msg() {
 void socket_listener() {
     while (1) {
 	client.read_msg();
-	parse_msg();
+	parse_msg_and_run_command();
     }
 }
 
