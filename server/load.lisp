@@ -7,7 +7,7 @@
   (load (merge-pathnames "src/multi-cursor-list.lisp" cwd))
   (load (merge-pathnames "src/multi-cursor-tree.lisp" cwd))
   (load (merge-pathnames "src/text-manager.lisp" cwd))
-  (load (merge-pathnames "server.lisp" cwd)))
+  (load (merge-pathnames "src/server.lisp" cwd)))
 
 (with-compilation-unit (:policy '(optimize debug))
   )

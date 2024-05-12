@@ -30,7 +30,6 @@ void main() {
     
     gl_Position =  ubo.proj * ubo.view * ubo.model * ssbo.model * inPos;
     // gl_Position =  ssbo.model * inPos;
-
     // gl_Position =  inPos;
 
     fragColor = ssbo.color;

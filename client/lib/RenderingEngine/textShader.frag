@@ -37,7 +37,7 @@ const float kQuadraticEpsilon = 0.0001;
 vec2 pixelsPerEm = vec2(1.0 / fwidth(fragTexCoord.x),
 			1.0 / fwidth(fragTexCoord.y));
 
-float get_coverage_r() {
+float get_coverage_right() {
     const int offset = offsets[fragCharId];
     const int size = sizes[fragCharId];
 
@@ -87,7 +87,7 @@ float get_coverage_r() {
     return coverage;
 }
 
-float get_coverage_u() {
+float get_coverage_up() {
     const int offset = offsets[fragCharId];
     const int size = sizes[fragCharId];
 
@@ -144,14 +144,17 @@ float get_coverage_u() {
 void main() {
     float coverage = 0.0;
 
-    coverage += get_coverage_r();
-    coverage += get_coverage_u();
+    coverage += get_coverage_right();
+    coverage += get_coverage_up();    
     coverage = sqrt(clamp(abs(coverage) / 2, 0.0, 1.0));
 
-    outColor = vec4((vec3(1.0, 1.0, 1.0) - fragColor.xyz) * (1.0 - coverage), fragColor.w);
-
-    if (0.1 < fragTexCoord.x && fragTexCoord.x < 0.15 && 0.1 < fragTexCoord.y && fragTexCoord.y < 0.15 )
-	    debugPrintfEXT("fragTexcoord %1.2v2f\n fragColor %1.2v4f\n coverage %f\n", fragTexCoord, fragColor, coverage);
+    outColor = vec4((vec3(1.0) * (1.0 - coverage) + fragColor.rgb * coverage) , fragColor.a);
+    
+    if (coverage == 0.0)
+	debugPrintfEXT("fragTexcoord %1.2v2f\n outColor %1.2v4f\n coverage %f\n", fragTexCoord, outColor, coverage);
+    
+    // if (0.1 < fragTexCoord.x && fragTexCoord.x < 0.15 && 0.1 < fragTexCoord.y && fragTexCoord.y < 0.15)
+    // 	debugPrintfEXT("fragTexcoord %1.2v2f\n fragColor %1.2v4f\n coverage %f\n", fragTexCoord, fragColor, coverage);
     
     // debugPrintfEXT("fwidth %1.2v2f\n", fwidth(fragTexCoord));    
     // debugPrintfEXT("fragTexcoord %1.2v2f\n", fragTexCoord);

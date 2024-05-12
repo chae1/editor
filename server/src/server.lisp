@@ -46,8 +46,8 @@
 (defobjfun send-text (user! text!)
   (send-msg connect (with-output-to-string (stream) (format stream "draw begin~%")))
   (let ((msg (print-text user! text!)))
-    ;; (print msg)
-    ;; (print (length msg))
+    (print msg)
+    (print (length msg))
     (send-msg connect msg))
   (send-msg connect (with-output-to-string (stream) (format stream "draw end~%"))))
 
@@ -79,6 +79,8 @@
   
   ;; (print (print-text user! text!))
   )
+
+;; key
 
 (defun map-alist-to-table (alist table)
   (mapc (lambda (pair) (setf (gethash (car pair) table) (cdr pair)))
@@ -254,6 +256,6 @@
 					  )
      )))
 
-(defun close-socket ()
+(defun close-server ()
   (format t "(stop-text-server!) closing server listeing to ~a~%" *socket*)
   (sb-bsd-sockets:socket-close *socket*))

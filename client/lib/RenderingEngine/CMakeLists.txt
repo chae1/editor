@@ -16,12 +16,16 @@ add_custom_command(
   ${CMAKE_CURRENT_BINARY_DIR}/vert.spv
   ${CMAKE_CURRENT_BINARY_DIR}/frag.spv
 
-  COMMAND glslc -o ${CMAKE_CURRENT_BINARY_DIR}/vert.spv ${CMAKE_CURRENT_SOURCE_DIR}/shader.vert
-  COMMAND glslc -o ${CMAKE_CURRENT_BINARY_DIR}/frag.spv ${CMAKE_CURRENT_SOURCE_DIR}/shader.frag
+  COMMAND glslc -o ${CMAKE_CURRENT_BINARY_DIR}/textVert.spv ${CMAKE_CURRENT_SOURCE_DIR}/textShader.vert
+  COMMAND glslc -o ${CMAKE_CURRENT_BINARY_DIR}/textFrag.spv ${CMAKE_CURRENT_SOURCE_DIR}/textShader.frag
+  COMMAND glslc -o ${CMAKE_CURRENT_BINARY_DIR}/triangleVert.spv ${CMAKE_CURRENT_SOURCE_DIR}/triangleShader.vert
+  COMMAND glslc -o ${CMAKE_CURRENT_BINARY_DIR}/triangleFrag.spv ${CMAKE_CURRENT_SOURCE_DIR}/triangleShader.frag
 
   DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/shader.vert
-  ${CMAKE_CURRENT_SOURCE_DIR}/shader.frag
+  ${CMAKE_CURRENT_SOURCE_DIR}/textShader.vert
+  ${CMAKE_CURRENT_SOURCE_DIR}/textShader.frag
+  ${CMAKE_CURRENT_SOURCE_DIR}/triangleShader.vert
+  ${CMAKE_CURRENT_SOURCE_DIR}/triangleShader.frag
 
   COMMENT "Compiling shaders")
 

@@ -62,6 +62,11 @@ namespace vk_engine {
 	std::vector<VkPresentModeKHR> presentModes;
     };
     
+    struct TriangleVertex {
+	glm::vec4 pos;
+	glm::vec4 color;
+    };
+    
     struct GlyphBoxVertex {
 	glm::vec4 pos;
 	glm::vec2 texCoord;
@@ -69,11 +74,6 @@ namespace vk_engine {
 	bool operator==(const GlyphBoxVertex& other) const {
             return pos == other.pos && texCoord == other.texCoord;
 	}
-    };
-
-    struct TriangleVertex {
-	glm::vec4 pos;
-	glm::vec4 color;
     };
     
     struct CharacterObject {
@@ -136,7 +136,10 @@ namespace vk_engine {
 	    createGlobalTransformMatrixUniformBuffers();
 
 	    createTriangleVertexBuffer();
+	    updateTriangleVertexBuffer();
+	    
 	    createTriangleIndexBuffer();
+	    updateTriangleIndexBuffer();
 	    
 	    createGlyphBoxVertexBuffer();
 	    createGlyphBoxIndexBuffer();
@@ -157,7 +160,7 @@ namespace vk_engine {
 	    allocateTextDescriptorSets();
 	    updateTextDescriptorSets();
 	    
-	    // createTriangleGraphicsPipeline();
+	    createTriangleGraphicsPipeline();
 	    createTextGraphicsPipeline();    
 	    
 	    createSyncObjects();

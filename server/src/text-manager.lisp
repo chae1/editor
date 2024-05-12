@@ -244,7 +244,9 @@ chaewon -> ((tc,            (tc,         ..
 	      (- 1 (* (/ (+ (- window-height height-vacancy) y-advance) window-height) 2))
 	      (* (/ x-advance window-width) 2)
 	      (* (/ y-advance window-height) 2)))
-    ;; (format t "char ~a window-width ~a width-vacancy ~a word-width ~a~%" char window-width width-vacancy word-width)
+
+    (format t "char ~a window-width ~a width-vacancy ~a word-width ~a~%" char window-width width-vacancy word-width)
+    
     (decf width-vacancy x-advance)
     (decf word-width x-advance)))
 
@@ -292,7 +294,7 @@ chaewon -> ((tc,            (tc,         ..
 	     (< height-vacancy (get-y-advance user!)))
     ;; skip head
     (my-tree:move-cursor-to-next line-tree text-iter-cursor)
-    ;; (format t "height vacancy : ~a width vacancy : ~a~%~a~%" height-vacancy width-vacancy text-iter-cursor)
+    (format t "height vacancy : ~a width vacancy : ~a~%~a~%" height-vacancy width-vacancy text-iter-cursor)
 
     (objlet* ((line! (my-tree:get-data text-iter-cursor)))      
       (my-list:move-cursor-to-head char-list word-start-cursor)
