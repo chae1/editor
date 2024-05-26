@@ -8,6 +8,7 @@ Common lisp server and c++ client for 3d shared text editing.
 
 ## How to run the editor
 ### For Ubuntu
+client
 run client
 ```console
 sudo apt update
@@ -20,6 +21,12 @@ build client
 ```console
 sudo apt install libglm-dev
 ```
+
+server
+download sbcl (https://www.sbcl.org/)
+download quicklisp 
+
+
 ### For Mac OS
 
 1. [install Common Lisp](https://lisp-lang.org/learn/getting-started/)
