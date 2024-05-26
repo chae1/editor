@@ -10,6 +10,8 @@ Common lisp server and c++ client for 3d shared text editing.
 ### For Ubuntu
 client
 run client
+install cmake
+
 ```console
 sudo apt update
 sudo apt-get install libglfw3-dev
@@ -26,6 +28,10 @@ server
 download sbcl (https://www.sbcl.org/)
 download quicklisp 
 
+## How to build editor
+### For Ubuntu
+install cmake
+install vulkan
 
 ### For Mac OS
 
