@@ -3,6 +3,7 @@
 
 (in-package :my-tree)
 
+(export 'tree-node!)
 (defobj tree-node!
   (data nil)
   (level 1 :type integer)
@@ -44,39 +45,28 @@
   (curr-index nil :type (or integer null))
   (curr-node nil :type (or tree-node! null)))
 
+(export 'cursor!-<=)
 (declaim (inline cursor!-<=))
 (defobjfun cursor!-<= (cursor!-1 cursor!-2)
   (<= curr-index-1 curr-index-2))
 
 (export 'multi-cursor-tree!)
-(export 'cursors)
+(export 'sorted-cursors)
 (defobj multi-cursor-tree!
   (size 0 :type integer)
   (head nil :type (or tree-node! null))
   (tail nil :type (or tree-node! null))
   (root nil :type (or tree-node! null))
   (iter-cursor nil :type (or null cursor!))
-  (cursors nil :type (or null cons)))
+  (sorted-cursors nil :type (or null cons)))
 
+(export 'get-node-by-index)
 (defobjfun get-node-by-index (t-multi-cursor-tree! index)
   (objdo* ((x-tree-node! t-root
                          (cond ((> x-num-left index) x-left-node)
                                ((< x-num-left index) (progn (decf index (+ x-num-left 1))
                                                             x-right-node)))))
       ((= x-num-left index) x)))
-
-(PROGN
- (EXPORT 'GET-NODE-BY-INDEX)
- (DEFUN GET-NODE-BY-INDEX (T-MULTI-CURSOR-TREE! INDEX)
-   (DO* ((X-TREE-NODE! (MULTI-CURSOR-TREE!-ROOT T-MULTI-CURSOR-TREE!)
-                       (COND
-                        ((> (TREE-NODE!-NUM-LEFT X-TREE-NODE!) INDEX)
-                         (TREE-NODE!-LEFT-NODE X-TREE-NODE!))
-                        ((< (TREE-NODE!-NUM-LEFT X-TREE-NODE!) INDEX)
-                         (PROGN
-                          (DECF INDEX (+ (TREE-NODE!-NUM-LEFT X-TREE-NODE!) 1))
-                          (TREE-NODE!-RIGHT-NODE X-TREE-NODE!))))))
-        ((= (TREE-NODE!-NUM-LEFT X-TREE-NODE!) INDEX) X-TREE-NODE!))))
 
 (export 'create-cursor!)
 (defobjfun create-cursor! (t-multi-cursor-tree! index)
@@ -93,14 +83,14 @@
     (setf root head)
     (objlet* ((cursor! (make-cursor! :curr-index 0 :curr-node head)))
       (setf iter-cursor cursor!)
-      (sorted-push cursor! cursors #'cursor!-<=))
+      (sorted-push cursor! sorted-cursors #'cursor!-<=))
     multi-cursor-tree!))
 
 (defmethod print-object ((tree multi-cursor-tree!) out)
   (let ((root (multi-cursor-tree!-root tree)))
     (print-unreadable-object (tree out :type t)
-      (format out "(size = ~d, cursors at" (multi-cursor-tree!-size tree))
-      (objdolist (cursor! (multi-cursor-tree!-cursors tree))
+      (format out "(size = ~d, sorted-cursors at" (multi-cursor-tree!-size tree))
+      (objdolist (cursor! (multi-cursor-tree!-sorted-cursors tree))
         (format out " ~a" curr-index))
       (format out ")")
 
@@ -116,7 +106,7 @@
       ;;                  (mapc #'(lambda (cursor)
       ;;                            (if (eq node (cursor!-curr-node cursor))
       ;;                                (format out " ^cursor")))
-      ;;                        (multi-cursor-tree!-cursors tree))
+      ;;                        (multi-cursor-tree!-sorted-cursors tree))
       ;; 		       (format out ", p = ")
       ;;                  (print-object (tree-node!-parent-node node) out)
       ;; 		       (format out ", l = ")
@@ -134,7 +124,7 @@
       (let ((node (get-node-by-index tree index)))
         (print-object node out)
         (if (eq node root) (format out "^r"))
-        (dolist (cursor (multi-cursor-tree!-cursors tree))
+        (dolist (cursor (multi-cursor-tree!-sorted-cursors tree))
           (if (eq node (cursor!-curr-node cursor))
               (progn
                 (format out " ^")
@@ -212,8 +202,8 @@
             ((eq i nil))
       (setf i (skew t i))
       (setf i (split t i)))
-    ;; update all cursors greater than current cursor
-    (dolist (cursor t-cursors)
+    ;; update all sorted-cursors greater than current cursor
+    (dolist (cursor t-sorted-cursors)
       (objlet* ((iter-cursor! cursor))
         (if (> iter-curr-index curr-index)
             (incf iter-curr-index))))
@@ -404,8 +394,8 @@
     ;; return if curr node is head
     (if (eq x head)
         (return-from delete-data-at-cursor t))
-    ;; update all cursors greater than or equal to current cursor
-    (dolist (cursor t-cursors)
+    ;; update all sorted-cursors greater than or equal to current cursor
+    (dolist (cursor t-sorted-cursors)
       (objlet* ((iter-cursor! cursor))
         (cond ((> iter-curr-index curr-index)
                (decf iter-curr-index))
@@ -547,12 +537,12 @@
 (export 'push-cursor!)
 (declaim (inline push-cursor!))
 (defobjfun push-cursor! (t-multi-cursor-tree! cursor!)
-  (sorted-push cursor! t-cursors #'cursor!-<=))
+  (sorted-push cursor! t-sorted-cursors #'cursor!-<=))
 
 (export 'remove-cursor!)
 (declaim (inline remove-cursor!))
 (defobjfun remove-cursor! (t-multi-cursor-tree! cursor!)
-  (remove-el cursor! t-cursors))
+  (remove-el cursor! t-sorted-cursors))
 
 (export 'get-size)
 (defobjmacro get-size (multi-cursor-tree!)

@@ -74,3 +74,55 @@
 	 (print (equal (car l) (caddr l)))
 	 )
        )))
+
+;; 2024.06.01
+
+(progn
+  ;; varibles for test
+  (defparameter *text* (create-text!))
+  (defparameter *char* (make-char! :char #\a))
+
+  ;; get-char-width
+  (objlet* ((text! *text*)
+	    (char! *char*)
+	    (font! font))
+    (setf char #\a)
+    (objlet* ((char-info! (gethash char char-info-table))
+	      (bounding-box! bounding-box))
+      (get-char-width)))
+
+  ;; get-space-width
+  (objlet* ((text! *text*)
+	    (char! *char*)
+	    (font! font))
+    (setf char #\ )
+    (objlet* ((char-info! (gethash char char-info-table))
+	      (bounding-box! bounding-box))
+      (get-space-width)))
+
+  ;; insert-line
+  (objlet* ((text! *text*))
+    (get-current-line)
+    (objlet* ((line! (create-line!)))
+      (insert-line)))
+
+  ;; load-text
+  (objlet* ((text! *text*))
+    (objlet* ((file-path (merge-pathnames "src/multi-cursor-list.lisp" (uiop/os:getcwd))))
+      (load-text text! file-path)))
+
+  (defparameter *user* (make-user! :text *text*))
+
+  (objlet* ((user! *user*))
+    (init-render-variables)
+    user!)
+
+  (objlet* ((user! *user*))
+    (get-vk-curr-pos-x))
+
+  ;; (objlet* ((user! *user*))
+  ;;   (get-vk-curr-pos-y))
+
+  
+  
+  )

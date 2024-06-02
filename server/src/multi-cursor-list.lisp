@@ -3,6 +3,7 @@
 
 (in-package :my-list)
 
+(export 'list-node!)
 (defobj list-node!
   (data nil)
   (prev-node nil :type (or list-node! null))
@@ -13,19 +14,20 @@
     (format out "(data = ~s)" (list-node!-data node))))
 
 (export 'multi-cursor-list!)
-(export 'cursors)
+(export 'sorted-cursors)
 (defobj multi-cursor-list!
   (size 0 :type integer)
   (head nil :type (or null list-node!))
   (tail nil :type (or null list-node!))
   (iter-cursor nil :type (or null cursor!))
-  (cursors nil :type (or null cons)))
+  (sorted-cursors nil :type (or null cons)))
 
 (export 'cursor!)
 (defobj cursor!
   (curr-index nil :type (or integer null))
   (curr-node nil :type (or list-node! null)))
 
+(export 'cursor!-<=)
 (declaim (inline cursor!-<=))
 (defobjfun cursor!-<= (cursor!-1 cursor!-2)
   (<= curr-index-1 curr-index-2))
@@ -46,23 +48,23 @@
 
     (objlet* ((cursor! (make-cursor! :curr-index 0 :curr-node head)))
       (setf iter-cursor cursor!)
-      (sorted-push cursor! cursors #'cursor!-<=))
+      (sorted-push cursor! sorted-cursors #'cursor!-<=))
 
     multi-cursor-list!))
 
 (export 'do-cursor)
 (defobjmacro do-cursor ((cursor! multi-cursor-list!) &body body)
-  `(objdolist (,cursor! ,cursors)
+  `(objdolist (,cursor! ,sorted-cursors)
      ,@body))
 
-;; (maphash #'(lambda (,user-name cursors)
-;;                 (objdolist (,cursor! cursors)
+;; (maphash #'(lambda (,user-name sorted-cursors)
+;;                 (objdolist (,cursor! sorted-cursors)
 ;;                   ,@body))
-;;     (cursors-table ,multi-cursor-list!))
+;;     (sorted-cursors-table ,multi-cursor-list!))
 
 (defmethod print-object ((list multi-cursor-list!) out)
   (print-unreadable-object (list out :type t)
-    (format out "(size = ~d, cursors at" (multi-cursor-list!-size list))
+    (format out "(size = ~d, sorted-cursors at" (multi-cursor-list!-size list))
     (do-cursor (cursor! list)
       (format out " ~a" curr-index))
     (format out ")"))
@@ -73,7 +75,7 @@
       (format out "~%")
       (print-object list-node! out)
 
-      (objdolist (cursor! cursors)
+      (objdolist (cursor! sorted-cursors)
 	(if (eq list-node! curr-node)
             (progn
               (format out " ^")
@@ -81,6 +83,7 @@
                   (format out "l-iter")
                   (format out "l-user"))))))))
 
+(export 'get-node-by-index)
 (defobjfun get-node-by-index (l-multi-cursor-list! index)
   (if (and (<= index l-size) (>= index 0))
       (objlet* ((ret-list-node! l-head))
@@ -100,7 +103,7 @@
     (setf (list-node!-prev-node curr-next-node) new-node)
     ;; update list
     (incf l-size)
-    ;; update all cursors greater than current cursor
+    ;; update all sorted-cursors greater than current cursor
     (do-cursor (iter-cursor! l)
       (if (> iter-curr-index curr-index)
           (incf iter-curr-index)))
@@ -109,6 +112,7 @@
     (incf curr-index)
     l))
 
+(export 'delete-data-at-cursor)
 (defobjfun delete-data-at-cursor (l-multi-cursor-list! cursor!)
   (if (not-eq curr-node l-head)
       (let ((curr-prev-node (list-node!-prev-node curr-node))
@@ -118,7 +122,7 @@
         (setf (list-node!-prev-node curr-next-node) curr-prev-node)
         ;; update list
         (decf l-size)
-        ;; update all cursors greater than or equal to current cursor
+        ;; update all sorted-cursors greater than or equal to current cursor
         (do-cursor (iter-cursor! l)
           (cond ((> iter-curr-index curr-index)
                  (decf iter-curr-index))
@@ -194,35 +198,35 @@
     (setf new-size (- size curr-index))
     (setf size curr-index)
 
-    (sort cursors #'cursor!-<=)
+    (sort sorted-cursors #'cursor!-<=)
 
-    ;; set cursors
-    (do* ((curr-cursors cursors (cdr curr-cursors)))
-         ((eq curr-cursors nil))
-      (let* ((cursor (car curr-cursors)))
+    ;; set sorted-cursors
+    (do* ((curr-sorted-cursors sorted-cursors (cdr curr-sorted-cursors)))
+         ((eq curr-sorted-cursors nil))
+      (let* ((cursor (car curr-sorted-cursors)))
         (if (eq cursor cursor!)
             (progn
-              ;; move curr-cursors further to the last with same index
-              (while (and (cdr curr-cursors) (eq (index-of cursor) (index-of (cadr curr-cursors))))
-                (setq curr-cursors (cdr curr-cursors)))
+              ;; move curr-sorted-cursors further to the last with same index
+              (while (and (cdr curr-sorted-cursors) (eq (index-of cursor) (index-of (cadr curr-sorted-cursors))))
+                (setq curr-sorted-cursors (cdr curr-sorted-cursors)))
 
-              ;; split cursors
-              (setf new-cursors (cdr curr-cursors))
-              (setf (cdr curr-cursors) nil)
+              ;; split sorted-cursors
+              (setf new-sorted-cursors (cdr curr-sorted-cursors))
+              (setf (cdr curr-sorted-cursors) nil)
 
-              ;; modify curr-size of new cursors
-              (objdolist (new-cursor! new-cursors)
+              ;; modify curr-size of new sorted-cursors
+              (objdolist (new-cursor! new-sorted-cursors)
                 (decf new-curr-index size))
 
               ;; update cursor
-              (remove-el cursor cursors)
+              (remove-el cursor sorted-cursors)
               (move-cursor-to-head new-multi-cursor-list! cursor)
-              (sorted-push cursor new-cursors #'cursor!-<=)
+              (sorted-push cursor new-sorted-cursors #'cursor!-<=)
               (return)))))
 
     (objlet* ((cursor! (make-cursor! :curr-index 0 :curr-node new-head)))
       (setf new-iter-cursor cursor!)
-      (sorted-push cursor! new-cursors #'cursor!-<=))
+      (sorted-push cursor! new-sorted-cursors #'cursor!-<=))
 
     new-multi-cursor-list!))
 
@@ -236,15 +240,15 @@
     (setf (list-node!-next-node last-1) next-2)
     (setf (list-node!-prev-node next-2) last-1)
     (setf tail-1 tail-2))
-  ;; cursors
-  (remove-el iter-cursor-2 cursors-2)
+  ;; sorted-cursors
+  (remove-el iter-cursor-2 sorted-cursors-2)
   (mapc (objlambda (cursor!)
 	  (if (eq curr-index 0)
 	      (my-list:move-cursor-to-last multi-cursor-list!-1 cursor!)
 	      (incf curr-index size-1)))
-	cursors-2)
-  ;; remove iter cursor in cursors 2
-  (nconc cursors-1 cursors-2))
+	sorted-cursors-2)
+  ;; remove iter cursor in sorted-cursors 2
+  (nconc sorted-cursors-1 sorted-cursors-2))
 
 (export 'get-data)
 (defobjmacro get-data (cursor!)
@@ -279,12 +283,12 @@
 (export 'push-cursor!)
 (declaim (inline push-cursor!))
 (defobjfun push-cursor! (l-multi-cursor-list! cursor!)
-  (sorted-push cursor! l-cursors #'cursor!-<=))
+  (sorted-push cursor! l-sorted-cursors #'cursor!-<=))
 
 (export 'remove-cursor!)
 (declaim (inline remove-cursor!))
 (defobjfun remove-cursor! (l-multi-cursor-list! cursor!)
-  (remove-el cursor! l-cursors))
+  (remove-el cursor! l-sorted-cursors))
 
 (export 'get-size)
 (defobjmacro get-size (multi-cursor-list!)

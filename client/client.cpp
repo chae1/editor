@@ -84,6 +84,7 @@ void parse_msg_and_run_command() {
 	    engine.textStorageBufferMutex.unlock();
 	    draw_flag = false;
 	}
+	
     } else {	
 	if (draw_flag) {
 	    if (token == "char") {
