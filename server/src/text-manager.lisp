@@ -100,7 +100,7 @@
 (defun parse-file (font! file-path)
   (loop-line (line fin file-path)
     (let* ((token (get-first-word-in-str line)))
-      (if-let ((parse-func (get-func token)))
+      (if-let ((parse-func (get-parse-func token)))
 	(funcall parse-func font! fin)))))
 
 (defun load-font (path)
@@ -163,6 +163,7 @@ cursor-list of user!
                  :line-iter-cursor (my-list:get-default-cursor char-list)
                  :word-start-cursor (my-list:create-cursor! char-list 0)
                  :word-end-cursor (my-list:create-cursor! char-list 0))))
+
 (defobj text!
   (file-path nil)
   (line-tree nil :type (or null my-tree:multi-cursor-tree!))
@@ -199,12 +200,20 @@ cursor-list of user!
 
 (declaim (special user! text! line! font! char! char-info! bounding-box!))
 
-(with-objs (text! char! bounding-box!)
-  (defun get-char-width ()
-    (+ horizontal-gap (* (- x-max x-min) font-size))))
+(with-objs (text!)
+  (defun get-char-info (char)
+    (objlet* ((font! font))
+      (gethash char char-info-table))))
+
+(with-objs (text! char!)
+  (defun get-char-advance ()
+    (objlet* ((font! font)
+              (char-info! )
+              (bounding-box! bounding-box))
+      (+ horizontal-gap (* (- x-max x-min) font-size)))))
 
 (with-objs (char! char-info!)
-  (defun get-space-width ()
+  (defun get-space-advance ()
     (* advance-width font-size)))
 
 (with-objs (text!)
@@ -233,11 +242,11 @@ cursor-list of user!
     (insert-line))
   (loop-char-in-file (char fin file-path-in)
     (if (eq char #\Newline)
-	(objlet* ((line! (create-line!)))
-	  (insert-line))
-	(objlet* ((line! (get-current-line))
-		  (char! (make-char! :char char)))
-	  (insert-char))))
+        (objlet* ((line! (create-line!)))
+          (insert-line))
+        (objlet* ((line! (get-current-line))
+                  (char! (make-char! :char char)))
+          (insert-char))))
   text!)
 
 ;; get pos and length in vulkan x, y coordinate ranged from -1.0 to 1.0
@@ -272,36 +281,30 @@ cursor-list of user!
     (setf curr-line-height 0.0)))
 
 (with-objs (user!)
-  (defun get-vk-char-pos-x ()
-    (+ -1 (* (/ (- window-width width-vacancy) window-width) 2))))
+  (defun get-width-in-vk-coord (width)
+    (* (/ width window-width) 2)))
 
 (with-objs (user!)
-  (defun get-vk-char-pos-y ()
-    (+ -1 (* (/ (- window-height height-vacancy) window-height) 2))))
+  (defun get-height-in-vk-coord (height)
+    (* (/ height window-height) 2)))
 
-  ;; bind char-width before use
-(with-objs (user!)
-  (defun get-normalized-char-width ()
-    (* (/ char-width window-width) 2)))
-
-  ;; bind line-height before use
-(with-objs (user!)
-  (defun get-normalized-line-height ()
-    (* (/ line-height window-height) 2)))
+(with-objs (user! char! bounding-box!)
+  (defun get-curr-char-x-in-vk-coord ()
+    (+ horizontal-gap (* (- x-max x-min) font-size))))
 
 (with-objs (text!)
   (defobjmacro loop-cursor ((cursor!) &body body)
     (let ((user (symbol-append 'user!- (gensym))))
       `(dolist (,user user-list)
-	 (objdolist (,cursor! (user!-cursor-list ,user))
-	   ,@body)))))
+         (objdolist (,cursor! (user!-cursor-list ,user))
+           ,@body)))))
 
 (with-objs (text! line!)
   (defobjmacro cursor-matches-curr-iter-cursors (cursor!)
     `(and (eq (my-tree:index-of text-iter-cursor)
-	      (my-tree:index-of ,text-cursor))
-	  (eq (my-list:index-of word-start-cursor)
-	      (my-list:index-of ,line-cursor)))))
+              (my-tree:index-of ,text-cursor))
+          (eq (my-list:index-of word-start-cursor)
+              (my-list:index-of ,line-cursor)))))
 
 ;; iter cursors in text! and line! are iterated for text character iteration.
 
