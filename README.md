@@ -1,3 +1,5 @@
+new version working on v2 branch
+
 # editor
 Common lisp server and c++ client for 3d shared text editing.
 
