@@ -77,52 +77,71 @@
 
 ;; 2024.06.01
 
-(progn
-  ;; varibles for test
-  (defparameter *text* (create-text!))
-  (defparameter *char* (make-char! :char #\a))
+;; varibles for test
+(defparameter *text* (create-text!))
+(defparameter *ubuntu-mono* (get-font "UbuntuMono-R"))
+(defparameter *user* (make-user! :username "user123" :curr-font *ubuntu-mono*))
 
-  ;; get-char-info
-  (objlet* ((text! *text*))
-    (get-char-info #\a))
+(objlet* ((user! *user*))
+  (defparameter *a* (create-char! #\a)))
+(objlet* ((user! *user*))
+  (defparameter *space* (create-char! #\ )))
 
-  ;; get-char-advance
-  (objlet* ((text! *text*)
-            (char! *char*)
-            (font! font))
-    (setf char #\a)
-    (objlet* ((char-info! (gethash char char-info-table))
-              (bounding-box! bounding-box))
-      (get-char-advance)))
+;; get-glyph-info
+(objlet* ((char! *a*))
+  glyph)
 
-  ;; get-space-width
-  (objlet* ((text! *text*)
-            (char! *char*)
-            (font! font))
-    (setf char #\ )
-    (objlet* ((char-info! (gethash char char-info-table))
-              (bounding-box! bounding-box))
-      (get-space-advance)))
+;; get-char-advance
+(objlet* ((char! *a*))
+  (get-char-advance))
 
-  ;; insert-line
-  (objlet* ((text! *text*))
-    (get-current-line)
-    (objlet* ((line! (create-line!)))
-      (insert-line)))
+;; get-space-width
+(objlet* ((user! *user*)
+	  (char! *space*))
+  (get-space-advance))
 
-  ;; load-text
-  (objlet* ((text! *text*))
-    (objlet* ((file-path (merge-pathnames "src/multi-cursor-list.lisp" (uiop/os:getcwd))))
-      (load-text text! file-path)))
+;; get-current-line
+(objlet* ((text! *text*))
+  (get-current-line))
 
-  (defparameter *user* (make-user! :text *text*))
+;; insert-line
+(objlet* ((text! *text*))
+  (insert-line (create-line!)))
 
-  (objlet* ((user! *user*))
-    (init-render-variables)
-    user!)
+(objlet* ((text! *text*)
+	  (line! (get-current-line)))
+  (insert-char *a*))
 
-  (objlet* ((user! *user*))
-    (get-width-in-vk-scale 10.0))
+;; load-text
+(objlet* ((text! *text*))
+  (objlet* ((file-path (merge-pathnames "src/multi-cursor-list.lisp" (uiop/os:getcwd))))
+    (load-text text! file-path)))
 
-  
-  )
+(objlet* ((user! *user*))
+  (init-window-lines)
+  (init-render-line-variables)
+  user!)
+
+(objlet* ((user! *user*))
+  (get-x-in-vk-coord 10.0))
+
+(objlet* ((user! *user*)
+	  (char! *a*))
+  (update-render-line-variables))
+
+(objlet* ((user! *user*)
+	  (char! *a*))
+  (get-char-x-in-vk-coord))
+
+(objlet* ((user! *user*)
+	  (char! *a*))
+  (get-char-y-in-vk-coord))
+
+(objlet* ((user! *user*)
+	  (char! *a*))
+  (get-char-width-in-vk-coord))
+
+(objlet* ((user! *user*)
+	  (char! *a*))
+  (get-char-height-in-vk-coord))
+

@@ -18,20 +18,21 @@
   (x-max 0.0 :type single-float)
   (y-max 0.0 :type single-float))
 
-(defobj char-info!
+(defobj glyph!
   ;; normalized scale 0 ~ 1
+  ;; for space
   (advance-width 0.0 :type single-float)
   (advance-height 0.0 :type single-float)
+  ;; for other characeters
   (bounding-box nil :type (or null bounding-box!)))
 
-(defun create-char-info! ()
-  (make-char-info! :bounding-box (make-bounding-box!)))
+(defun create-glyph! ()
+  (make-glyph! :bounding-box (make-bounding-box!)))
 
 (defobj font!
   (fontname nil :type (or null string))
-  (em 0.0 :type float)
-  (char-info-table (make-hash-table) :type hash-table)
-  (curr-char-info nil :type (or null char-info!)))
+  (curr-glyph nil :type (or null glyph!))
+  (glyph-table (make-hash-table) :type hash-table))
 
 (defparameter *font-table* (make-hash-table :test 'equal))
 
@@ -49,9 +50,9 @@
 
 (add-parse-func "glyph"
 		(objlambda (font! fin)
-		  (let ((glyph (uiop:first-char (read-line fin))))
-		    (setf curr-char-info (create-char-info!))
-		    (setf (gethash glyph char-info-table) curr-char-info))))
+		  (let ((char (uiop:first-char (read-line fin))))
+		    (setf curr-glyph (create-glyph!))
+		    (setf (gethash char glyph-table) curr-glyph))))
 
 (defun read-from-nth-str (n str-list)
   (read-from-string (nth n str-list)))
@@ -60,17 +61,17 @@
 
 (add-parse-func "advance-width"
 		(objlambda (font! fin)
-		  (objlet* ((char-info! curr-char-info))
+		  (objlet* ((glyph! curr-glyph))
 		    (setf advance-width (read-from-string (read-line fin))))))
 
 (add-parse-func "advance-height"
 		(objlambda (font! fin)
-		  (objlet* ((char-info! curr-char-info))
+		  (objlet* ((glyph! curr-glyph))
 		    (setf advance-height (read-from-string (read-line fin))))))
 
 (add-parse-func "bounding-box"
 		(objlambda (font! fin)
-		  (objlet* ((char-info! curr-char-info)
+		  (objlet* ((glyph! curr-glyph)
 			    (bounding-box! bounding-box))
 		    (let ((str-list (split "\\s+" (read-line fin))))
 		      (setf x-min (read-from-nth-str 0 str-list))
@@ -104,10 +105,11 @@
 	(funcall parse-func font! fin)))))
 
 (defun load-font (path)
-  (format t "load font path ~s" path)
+  (format t "load font path ~s~%" path)
   (if (pathname-directory path)
-      (objlet* ((font-dir-name (car (last (pathname-directory path))))
-		(font! (get-font font-dir-name)))
+      (objlet* ((dirname (car (last (pathname-directory path))))
+		(font! (get-font dirname)))
+	(setf fontname dirname)
 	(dolist (file-path (uiop:directory-files path))
 	  (parse-file font! file-path)))
       (break (with-output-to-string (out)
@@ -143,8 +145,24 @@ cursor-list of user!
 (defobj char!
   (char nil :type (or null character))
   (char-color #(0.0 0.0 0.0) :type (simple-vector 3))
-  ;; scale normalized scale to pixel scale
-  (font-size 10.0 :type single-float))
+  (fontname nil :type (or null string))
+  ;; normalized scale
+  (glyph nil :type (or null glyph!))
+  ;; normalized scale to pixel scale
+  (font-size 10.0 :type single-float)
+  ;; pixel scale
+  (x-line-gap 1.0 :type single-float)
+  (y-line-gap 1.0 :type single-float))
+
+(with-objs (user!)
+  (defun create-char! (char)
+    (objlet* ((font! curr-font))
+      (make-char! :char char
+		  :fontname fontname
+		  :glyph (gethash char glyph-table)
+		  :font-size curr-font-size
+		  :x-line-gap curr-x-line-gap
+		  :y-line-gap curr-y-line-gap))))
 
 (defobj line!
   (char-list nil :type my-list:multi-cursor-list!)
@@ -168,18 +186,14 @@ cursor-list of user!
   (file-path nil)
   (line-tree nil :type (or null my-tree:multi-cursor-tree!))
   (text-iter-cursor nil :type (or null my-tree:cursor!))
-  (font nil :type (or null font!))
-  ;; pixel scale
-  (horizontal-gap 1.0 :type single-float)
-  (vertical-gap 1.0 :type single-float)
+
   (user-list nil :type (or null cons)))
 
 (export 'create-text!)
 (defobjfun create-text! ()
   (objlet* ((line-tree (my-tree:create-multi-cursor-tree!)))
     (make-text! :line-tree line-tree
-		:text-iter-cursor (my-tree:get-default-cursor line-tree)
-		:font (get-font "UbuntuMono-R"))))
+		:text-iter-cursor (my-tree:get-default-cursor line-tree))))
 
 (defmethod print-object ((obj text!) out)
   (print-unreadable-object (obj out :type t)
@@ -198,23 +212,18 @@ cursor-list of user!
             (if (cursor!-text-cursor c) (my-tree:index-of (cursor!-text-cursor c)))
             (if (cursor!-line-cursor c) (my-list:index-of (cursor!-line-cursor c))))))
 
-(declaim (special user! text! line! font! char! char-info! bounding-box!))
+(declaim (special user! text! line! font! char! glyph! bounding-box!))
 
-(with-objs (text!)
-  (defun get-char-info (char)
-    (objlet* ((font! font))
-      (gethash char char-info-table))))
-
-(with-objs (text! char!)
+(with-objs (char!)
   (defun get-char-advance ()
-    (objlet* ((font! font)
-              (char-info! )
-              (bounding-box! bounding-box))
-      (+ horizontal-gap (* (- x-max x-min) font-size)))))
+    (objlet* ((char-glyph! glyph)
+              (char-bounding-box! char-bounding-box))
+      (+ x-line-gap (* (- char-x-max char-x-min) font-size)))))
 
-(with-objs (char! char-info!)
+(with-objs (char!)
   (defun get-space-advance ()
-    (* advance-width font-size)))
+    (objlet* ((space-glyph! glyph))
+      (* space-advance-width font-size))))
 
 (with-objs (text!)
   (defun get-current-line ()
@@ -227,26 +236,22 @@ cursor-list of user!
 	   ,@body)
        (end-of-file (o) nil))))
 
-(with-objs (text! line!)
-  (defobjfun insert-line ()
-    (my-tree:insert-data-after-cursor line-tree text-iter-cursor line!)
-    (print text!)))
+(with-objs (text!)
+  (defun insert-line (line!)
+    (my-tree:insert-data-after-cursor line-tree text-iter-cursor line!)))
 
-(with-objs (line! char!)
-  (defobjfun insert-char ()
+(with-objs (line!)
+  (defun insert-char (char!)
     (my-list:insert-data-after-cursor char-list line-iter-cursor char!)))
 
 (defobjfun load-text (text! file-path-in)
   (setf file-path file-path-in)
-  (objlet* ((line! (create-line!)))
-    (insert-line))
+  (insert-line (create-line!))
   (loop-char-in-file (char fin file-path-in)
     (if (eq char #\Newline)
-        (objlet* ((line! (create-line!)))
-          (insert-line))
-        (objlet* ((line! (get-current-line))
-                  (char! (make-char! :char char)))
-          (insert-char))))
+        (insert-line (create-line!))
+        (objlet* ((line! (get-current-line)))
+          (insert-char (make-char! :char char)))))
   text!)
 
 ;; get pos and length in vulkan x, y coordinate ranged from -1.0 to 1.0
@@ -259,15 +264,31 @@ cursor-list of user!
   (key-input-state nil)
   (osstream (make-string-output-stream) :type sb-impl::string-output-stream)
   (text nil :type (or null text!))
+
+  ;; char variables
+  (curr-font nil :type (or null font!))
+  ;; normalized scale to pixel scale
   (curr-font-size 10.0 :type single-float)
+  ;; pixel scale
+  (curr-x-line-gap 1.0 :type single-float)
+  (curr-y-line-gap 1.0 :type single-float)
+  
   ;; pixel scale
   (window-width 400.0 :type single-float)
   (window-height 600.0 :type single-float)
+
+  ;; window variables
+  ;; pixel scale
   (x-line 0.0 :type single-float)
   (y-line 0.0 :type single-float)
-  (curr-line-height 0.0 :type single-float)
+  
+  ;; render line variables
+  ;; pixel scale
+  (curr-render-line-base 0.0 :type single-float)
+  (curr-render-line-height 0.0 :type single-float)
 
-  (curr-line-row-count 1 :type integer)
+  (curr-line-row-index 1 :type integer)
+  
   (render-start-line-index 1 :type integer)
   (render-start-line-row-index 1 :type integer)
   
@@ -275,10 +296,24 @@ cursor-list of user!
   (cursor-list nil :type (or null cons)))
 
 (with-objs (user!)
-  (defun init-render-variables ()
+  (defun init-window-lines ()
     (setf x-line 0.0)
-    (setf y-line 0.0)
-    (setf curr-line-height 0.0)))
+    (setf y-line 0.0)))
+
+(with-objs (user!)
+  (defun init-render-line-variables ()
+    (setf curr-render-line-base 0.0)
+    (setf curr-render-line-height 0.0)))
+  
+;; pixel scale to vk scale
+(with-objs (user!)
+  (defun get-x-in-vk-coord (x)
+    (+ -1 (* (/ x window-width) 2))))
+
+;; pixel scale to vk scale
+(with-objs (user!)
+  (defun get-y-in-vk-coord (y)
+    (+ -1 (* (/ y window-height) 2))))
 
 (with-objs (user!)
   (defun get-width-in-vk-coord (width)
@@ -288,70 +323,90 @@ cursor-list of user!
   (defun get-height-in-vk-coord (height)
     (* (/ height window-height) 2)))
 
-(with-objs (user! char! bounding-box!)
-  (defun get-curr-char-x-in-vk-coord ()
-    (+ horizontal-gap (* (- x-max x-min) font-size))))
+(defmacro update-val (value cand compare)
+  (let ((cand-bind (symbol-append 'cand- (gensym))))
+    `(let ((,cand-bind ,cand))
+       (if (funcall ,compare ,cand-bind ,value)
+	   (setf ,value ,cand-bind)))))
+
+(with-objs (user! char!)
+  (defobjfun update-render-line-variables ()
+    (objlet* ((glyph! glyph)
+	      (char-bounding-box! bounding-box))
+      (update-val curr-render-line-base (* char-y-max font-size) #'>)
+      (update-val curr-render-line-height (+ y-line-gap curr-render-line-base (- char-y-min)) #'>))))
+
+(with-objs (user! char!)
+  (defobjfun get-char-x-in-vk-coord ()
+    (get-x-in-vk-coord (+ x-line x-line-gap))))
+
+(with-objs (user! char!)
+  (defobjfun get-char-y-in-vk-coord ()
+    (objlet* ((glyph! glyph)
+	      (char-bounding-box! bounding-box))
+      (get-y-in-vk-coord (+ y-line y-line-gap curr-render-line-base (- char-y-min))))))
+
+(with-objs (user! char!)
+  (defobjfun get-char-width-in-vk-coord ()
+    (objlet* ((glyph! glyph)
+	      (char-bounding-box! bounding-box))
+      (get-width-in-vk-coord (* (- char-x-max char-x-min) font-size)))))
+
+(with-objs (user! char!)
+  (defobjfun get-char-height-in-vk-coord ()
+    (objlet* ((glyph! glyph)
+	      (char-bounding-box! bounding-box))
+      (get-height-in-vk-coord (* (- char-y-max char-y-min) font-size)))))
 
 (with-objs (text!)
-  (defobjmacro loop-cursor ((cursor!) &body body)
-    (let ((user (symbol-append 'user!- (gensym))))
-      `(dolist (,user user-list)
-         (objdolist (,cursor! (user!-cursor-list ,user))
-           ,@body)))))
+  (defobjmacro loop-cursor ((user! cursor!) &body body)
+    `(objdolist (,user! user-list)
+       (objdolist (,cursor! ,cursor-list)
+         ,@body))))
 
-(with-objs (text! line!)
-  (defobjmacro cursor-matches-curr-iter-cursors (cursor!)
-    `(and (eq (my-tree:index-of text-iter-cursor)
-              (my-tree:index-of ,text-cursor))
-          (eq (my-list:index-of word-start-cursor)
-              (my-list:index-of ,line-cursor)))))
+(with-objs (text! line! cursor!)
+  (defobjfun cursor-matches-text-iter-cursor ()
+    (and (eq (my-tree:index-of text-iter-cursor)
+             (my-tree:index-of text-cursor))
+         (eq (my-list:index-of word-start-cursor)
+             (my-list:index-of line-cursor)))))
 
-;; iter cursors in text! and line! are iterated for text character iteration.
+;; text=iter-cursor, word-start-cursor, and word-end-cursor in text! and line! will be iterated for text iteration
 
-(with-objs (user! text! line! char!)
-  (defobjmacro print-cursors ()
-    `(loop-cursor (cursor!)
-       (when (cursor-matches-curr-iter-cursors cursor!)
-	 (format osstream "cursor ~a ~a ~a ~a ~a ~a ~a ~a~%"
-		 username
-		 (get-normalized-char-pos-x)
-		 (get-normalized-char-pos-y)
-		 (get-normalized-char-width char!)
-		 (get-normalized-line-height user!)
-		 (aref cursor-color 0)
-		 (aref cursor-color 1)
-		 (aref cursor-color 2)))))
+(with-objs (text! line! user! char!)
+  (defobjfun print-cursors ()
+    (loop-cursor (cursor-user! cursor!)
+      (when (cursor-matches-text-iter-cursor)
+	(format osstream "cursor ~a ~a ~a ~a ~a ~a ~a ~a~%"
+		cursor-username
+		(get-char-x-in-vk-coord)
+		(get-char-y-in-vk-coord)
+		(get-char-width-in-vk-coord)
+		(get-char-height-in-vk-coord)
+		(aref cursor-color 0)
+		(aref cursor-color 1)
+		(aref cursor-color 2))))))
 
-  (defobjmacro print-char ()
-    `(when (not-eq char #\ )
-       (format osstream "char ~a ~a ~a ~a ~a~%"
-	       char
-	       (get-normalized-char-pos-x)
-	       (get-normalized-char-pos-y)
-	       (get-normalized-char-width)
-	       (get-normalized-line-height)))))
+(with-objs (user! char!)
+  (defobjfun print-char ()
+    (when (not-eq char #\ )
+      (format osstream "char ~a ~a ~a ~a ~a~%"
+	      char
+	      (get-char-x-in-vk-coord)
+	      (get-char-y-in-vk-coord)
+	      (get-char-width-in-vk-coord)
+	      (get-char-height-in-vk-coord)))))
 
-(defobjfun print-cursors (user! text! line! char!)
-  (loop-cursor (cursor!)
-    (when (cursor-matches-curr-iter-cursors text! line! cursor!)
-      (format osstream "cursor ~a ~a ~a ~a ~a ~a ~a ~a~%"
-	      username
-	      (get-normalized-char-pos-x user!)
-	      (get-normalized-char-pos-y user!)
-	      (get-normalized-char-width user! char!)
-	      (get-normalized-line-height user!)
-	      (aref cursor-color 0)
-	      (aref cursor-color 1)
-	      (aref cursor-color 2)))))
+(with-objs (user!)
+  (defun advance-render-line ()
+    (incf y-line curr-render-line-height)
+    (setf x-line 0.0)
+    (incf curr-line-row-index)))
 
-(defobjfun print-char (user! char!)
-  (when (not-eq char #\ )
-    (format osstream "char ~a ~a ~a ~a ~a~%"
-	    char
-	    (get-normalized-char-pos-x user!)
-	    (get-normalized-char-pos-y user!)
-	    (get-normalized-char-width user! char!)
-	    (get-normalized-line-height user!))))
+(with-objs (user! char!)
+  (defun advance-char ()
+    (incf x-line (get-char-advance))))
+
 
 (with-objs (user! line!)
   ;; bind line-height before use
