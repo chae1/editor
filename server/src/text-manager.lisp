@@ -287,7 +287,7 @@ cursor-list of user!
   (curr-render-line-base 0.0 :type single-float)
   (curr-render-line-height 0.0 :type single-float)
 
-  (curr-line-row-index 1 :type integer)
+  (curr-render-line-row-index 1 :type integer)
   
   (render-start-line-index 1 :type integer)
   (render-start-line-row-index 1 :type integer)
@@ -323,37 +323,37 @@ cursor-list of user!
   (defun get-height-in-vk-coord (height)
     (* (/ height window-height) 2)))
 
-(defmacro update-val (value cand compare)
+(defmacro update-variable (var cand compare)
   (let ((cand-bind (symbol-append 'cand- (gensym))))
     `(let ((,cand-bind ,cand))
-       (if (funcall ,compare ,cand-bind ,value)
-	   (setf ,value ,cand-bind)))))
+       (if (funcall ,compare ,cand-bind ,var)
+	   (setf ,var ,cand-bind)))))
 
 (with-objs (user! char!)
-  (defobjfun update-render-line-variables ()
+  (defun update-render-line-variables ()
     (objlet* ((glyph! glyph)
 	      (char-bounding-box! bounding-box))
-      (update-val curr-render-line-base (* char-y-max font-size) #'>)
-      (update-val curr-render-line-height (+ y-line-gap curr-render-line-base (- char-y-min)) #'>))))
+      (update-variable curr-render-line-base (* char-y-max font-size) #'>)
+      (update-variable curr-render-line-height (+ y-line-gap curr-render-line-base (- char-y-min)) #'>))))
 
 (with-objs (user! char!)
-  (defobjfun get-char-x-in-vk-coord ()
+  (defun get-char-x-in-vk-coord ()
     (get-x-in-vk-coord (+ x-line x-line-gap))))
 
 (with-objs (user! char!)
-  (defobjfun get-char-y-in-vk-coord ()
+  (defun get-char-y-in-vk-coord ()
     (objlet* ((glyph! glyph)
 	      (char-bounding-box! bounding-box))
       (get-y-in-vk-coord (+ y-line y-line-gap curr-render-line-base (- char-y-min))))))
 
 (with-objs (user! char!)
-  (defobjfun get-char-width-in-vk-coord ()
+  (defun get-char-width-in-vk-coord ()
     (objlet* ((glyph! glyph)
 	      (char-bounding-box! bounding-box))
       (get-width-in-vk-coord (* (- char-x-max char-x-min) font-size)))))
 
 (with-objs (user! char!)
-  (defobjfun get-char-height-in-vk-coord ()
+  (defun get-char-height-in-vk-coord ()
     (objlet* ((glyph! glyph)
 	      (char-bounding-box! bounding-box))
       (get-height-in-vk-coord (* (- char-y-max char-y-min) font-size)))))
@@ -365,7 +365,7 @@ cursor-list of user!
          ,@body))))
 
 (with-objs (text! line! cursor!)
-  (defobjfun cursor-matches-text-iter-cursor ()
+  (defun cursor-matches-text-iter-cursor ()
     (and (eq (my-tree:index-of text-iter-cursor)
              (my-tree:index-of text-cursor))
          (eq (my-list:index-of word-start-cursor)
@@ -374,7 +374,7 @@ cursor-list of user!
 ;; text=iter-cursor, word-start-cursor, and word-end-cursor in text! and line! will be iterated for text iteration
 
 (with-objs (text! line! user! char!)
-  (defobjfun print-cursors ()
+  (defun print-cursors ()
     (loop-cursor (cursor-user! cursor!)
       (when (cursor-matches-text-iter-cursor)
 	(format osstream "cursor ~a ~a ~a ~a ~a ~a ~a ~a~%"
@@ -388,7 +388,7 @@ cursor-list of user!
 		(aref cursor-color 2))))))
 
 (with-objs (user! char!)
-  (defobjfun print-char ()
+  (defun print-char ()
     (when (not-eq char #\ )
       (format osstream "char ~a ~a ~a ~a ~a~%"
 	      char
@@ -398,14 +398,55 @@ cursor-list of user!
 	      (get-char-height-in-vk-coord)))))
 
 (with-objs (user!)
-  (defun advance-render-line ()
+  (defun insert-new-render-line ()
     (incf y-line curr-render-line-height)
     (setf x-line 0.0)
-    (incf curr-line-row-index)))
+    (incf curr-render-line-row-index)))
 
 (with-objs (user! char!)
+  (defun curr-char-overflows-render-line ()
+    (> (+ x-line (get-char-advance)) window-width)))
+
+(with-objs (line! char!)
+  (defun increase-word ()
+    (incf curr-word-width (get-char-advance))))
+
+(with-objs (line! char!)
+  (defun decrease-word ()
+    (decf curr-word-width (get-char-advance))))
+
+(with-objs (user! line! char!)
   (defun advance-char ()
-    (incf x-line (get-char-advance))))
+    (if (curr-char-overflows-render-line)
+        (insert-new-render-line))
+    (incf x-line (get-char-advance))
+    (decrease-word)))
+
+(with-objs (user! line!)
+  ;; loop word-start-cursor until it matches to word-end-cursor while binding char
+  (defmacro loop-char-in-curr-word ((char!) &body body)
+    `(loop-until (my-list:same-indices? word-start-cursor word-end-cursor)
+       (my-list:move-cursor-to-next char-list word-start-cursor)
+       (objlet* ((,char! (my-list:get-data word-start-cursor)))
+         ,@body))))
+
+(with-objs (user! line!)
+  (defun curr-word-overflows-render-line ()
+    (> (+ x-line curr-word-width) window-width)))
+
+(with-objs (user! line!)
+  (defun curr-word-fits-in-new-render-line ()
+    (<= curr-word-width window-width)))
+
+(with-objs (user! line!)
+  (defun advance-curr-word ()
+    (if (and (curr-word-overflows-render-line)
+             (curr-word-fits-in-new-render-line))
+        (insert-new-render-line))
+    (loop-char-in-curr-word (char!)
+      (advance-char))))
+
+
 
 
 (with-objs (user! line!)
