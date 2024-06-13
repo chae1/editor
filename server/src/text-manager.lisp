@@ -227,21 +227,21 @@ cursor-list of user!
        (end-of-file (o) nil))))
 
 (with-objs (text!)
-  (defun insert-line (line!)
+  (defun insert-line-in-text (line!)
     (my-tree:insert-data-after-cursor line-tree text-iter-cursor line!)))
 
 (with-objs (line!)
-  (defun insert-char (char!)
+  (defun insert-char-in-line (char!)
     (my-list:insert-data-after-cursor char-list line-iter-cursor char!)))
 
 (defobjfun load-text (text! file-path-in)
   (setf file-path file-path-in)
-  (insert-line (create-line!))
+  (insert-line-in-text (create-line!))
   (loop-char-in-file (char fin file-path-in)
     (if (eq char #\Newline)
-        (insert-line (create-line!))
+        (insert-line-in-text (create-line!))
         (objlet* ((line! (get-current-line)))
-          (insert-char (make-char! :char char)))))
+          (insert-char-in-line (make-char! :char char)))))
   text!)
 
 ;; get pos and length in vulkan x, y coordinate ranged from -1.0 to 1.0
@@ -396,6 +396,9 @@ cursor-list of user!
       (update-variable curr-render-line-base (* char-y-max font-size) #'>)
       (update-variable curr-render-line-height (+ y-line-gap curr-render-line-base (- char-y-min)) #'>))))
 
+(define-condition render-finished (error)
+  ())
+
 (with-objs (user!)
   (defun insert-new-render-line ()
     (setf x-line 0.0)
@@ -403,7 +406,9 @@ cursor-list of user!
     (if print-started
 	(progn
 	  (incf y-line curr-render-line-height)
-	  (init-render-line-height-variables)))))
+	  (init-render-line-height-variables)
+	  (if (y-line window-height)
+	      (error 'render-finished))))))
 
 (with-objs (user! char!)
   (defun curr-char-overflows-render-line ()
@@ -491,9 +496,6 @@ cursor-list of user!
 
 	    (t
              (increase-word-width))))))
-
-(define-condition render-finished (error)
-  ())
 
 (with-objs (user!)
   (defun print-text ()
