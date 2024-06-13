@@ -272,7 +272,7 @@ cursor-list of user!
   (x-line 0.0 :type single-float)
   (y-line 0.0 :type single-float)
   
-  ;; render line variables
+  ;; render line height variables
   ;; pixel scale
   (curr-render-line-base 0.0 :type single-float)
   (curr-render-line-height 0.0 :type single-float)
@@ -281,6 +281,8 @@ cursor-list of user!
   
   (render-start-line-index 1 :type integer)
   (render-start-line-row-index 1 :type integer)
+
+  (print-started nil :type boolean)
   
   (primary-cursor nil :type (or null cursor!))
   (cursor-list nil :type (or null cons)))
@@ -314,19 +316,6 @@ cursor-list of user!
 (with-objs (user!)
   (defun get-height-in-vk-coord (height)
     (* (/ height window-height) 2)))
-
-(defmacro update-variable (var cand compare)
-  (let ((cand-bind (symbol-append 'cand- (gensym))))
-    `(let ((,cand-bind ,cand))
-       (if (funcall ,compare ,cand-bind ,var)
-	   (setf ,var ,cand-bind)))))
-
-(with-objs (user! char!)
-  (defun update-render-line-variables ()
-    (objlet* ((glyph! glyph)
-	      (char-bounding-box! bounding-box))
-      (update-variable curr-render-line-base (* char-y-max font-size) #'>)
-      (update-variable curr-render-line-height (+ y-line-gap curr-render-line-base (- char-y-min)) #'>))))
 
 (with-objs (user! char!)
   (defun get-char-x-in-vk-coord ()
@@ -390,10 +379,31 @@ cursor-list of user!
 	      (get-char-height-in-vk-coord)))))
 
 (with-objs (user!)
+  (defun init-render-line-height-variables ()
+    (setf curr-render-line-base 0.0)
+    (setf curr-render-line-height 0.0)))
+
+(defmacro update-variable (var cand compare)
+  (let ((cand-bind (symbol-append 'cand- (gensym))))
+    `(let ((,cand-bind ,cand))
+       (if (funcall ,compare ,cand-bind ,var)
+	   (setf ,var ,cand-bind)))))
+
+(with-objs (user! char!)
+  (defun update-render-line-height-variables ()
+    (objlet* ((glyph! glyph)
+	      (char-bounding-box! bounding-box))
+      (update-variable curr-render-line-base (* char-y-max font-size) #'>)
+      (update-variable curr-render-line-height (+ y-line-gap curr-render-line-base (- char-y-min)) #'>))))
+
+(with-objs (user!)
   (defun insert-new-render-line ()
-    (incf y-line curr-render-line-height)
     (setf x-line 0.0)
-    (incf curr-render-line-row-index)))
+    (incf curr-render-line-row-index)
+    (if print-started
+	(progn
+	  (incf y-line curr-render-line-height)
+	  (init-render-line-height-variables)))))
 
 (with-objs (user! char!)
   (defun curr-char-overflows-render-line ()
@@ -412,11 +422,18 @@ cursor-list of user!
     (if (curr-char-overflows-render-line)
         (insert-new-render-line))
     (incf x-line (get-char-advance))
-    (decrease-word-width)))
+    (decrease-word-width)
+    (if print-started
+	(progn
+	  (print-char)
+	  (print-cursors)
+	  (update-render-line-height-variables)))))
 
 (with-objs (user! char!)
   (defun advance-space ()
-    (incf x-line (get-space-advance))))
+    (incf x-line (get-space-advance))
+    (if print-started
+	(print-cursors))))
 
 (with-objs (user! line!)
   ;; loop word-start-cursor until it matches to word-end-cursor while binding char
@@ -469,19 +486,28 @@ cursor-list of user!
              (my-list:move-cursor-to-next char-list word-start-cursor)
              (advance-space))
 
-            ((my-list:is-cursor-last char-list word-end-cursor)
+	    ((my-list:is-cursor-last char-list word-end-cursor)
              (advance-word))
 
-            (t
+	    (t
              (increase-word-width))))))
+
+(define-condition render-finished (error)
+  ())
 
 (with-objs (user!)
   (defun print-text ()
-    (objlet* ((text! text))
-      (setf x-line 0.0)
-      (setf y-line 0.0)
-      (my-tree:move-cursor-to-index line-tree text-iter-cursor (1- render-start-line-index))
-      )))
+    (handler-case
+	(objlet* ((text! text))
+	  (setf x-line 0.0)
+	  (setf y-line 0.0)
+	  (my-tree:move-cursor-to-index line-tree text-iter-cursor (1- render-start-line-index))
+	  (setf curr-render-line-row-index 1)
+	  )
+      (render-finished (c)
+	(format t "~s~%" c)))))
+
+
 
 
 
