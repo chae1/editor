@@ -569,10 +569,20 @@ cursor-list of user!
 	    (format t "my-text:push-cursor! char-index out of bound.~%")
 	    (return-from add-primary-cursor))))))
 
+(declaim (special cursor!))
+
+(with-objs (cursor!)
+  (defun get-line ()
+    (my-tree:get-data text-cursor)))
+
 (with-objs (user! text!)
   (defun remove-all-but-primary-cursor ()
     (objdolist (cursor! cursor-list)
-      (if (not-eq )))))
+      (if (not-eq cursor! primary-cursor)
+          (objlet* ((line! (get-line)))
+            (my-tree:remove-cursor! line-tree text-cursor)
+            (my-list:remove-cursor! char-list line-cursor)
+            )))))
 
 
 
