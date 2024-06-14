@@ -157,6 +157,7 @@ cursor-list of user!
 (defobj line!
   (char-list nil :type my-list:multi-cursor-list!)
   (line-iter-cursor nil :type my-list:cursor!)
+  ;; line variables
   (word-start-cursor nil :type my-list:cursor!)
   (word-end-cursor nil :type my-list:cursor!)
   (curr-word-width 0.0 :type single-float))
@@ -354,7 +355,7 @@ cursor-list of user!
 
 ;; text=iter-cursor, word-start-cursor, and word-end-cursor in text! and line! will be iterated for text iteration
 
-(with-objs (text! line! user! char!)
+(with-objs (user! text! line! char!)
   (defun print-cursors ()
     (loop-cursor (cursor-user! cursor!)
       (when (cursor-matches-text-iter-cursor)
@@ -396,7 +397,7 @@ cursor-list of user!
       (update-variable curr-render-line-base (* char-y-max font-size) #'>)
       (update-variable curr-render-line-height (+ y-line-gap curr-render-line-base (- char-y-min)) #'>))))
 
-(define-condition render-finished (error)
+(define-condition y-line-exceeded-window-height (error)
   ())
 
 (with-objs (user!)
@@ -407,8 +408,8 @@ cursor-list of user!
 	(progn
 	  (incf y-line curr-render-line-height)
 	  (init-render-line-height-variables)
-	  (if (y-line window-height)
-	      (error 'render-finished))))))
+	  (if (>= y-line window-height)
+	      (error 'y-line-exceeded-window-height))))))
 
 (with-objs (user! char!)
   (defun curr-char-overflows-render-line ()
@@ -422,7 +423,7 @@ cursor-list of user!
   (defun decrease-word-width ()
     (decf curr-word-width (get-char-advance))))
 
-(with-objs (user! line! char!)
+(with-objs (user! text! line! char!)
   (defun advance-char ()
     (if (curr-char-overflows-render-line)
         (insert-new-render-line))
@@ -434,13 +435,13 @@ cursor-list of user!
 	  (print-cursors)
 	  (update-render-line-height-variables)))))
 
-(with-objs (user! char!)
+(with-objs (user! text! line! char!)
   (defun advance-space ()
     (incf x-line (get-space-advance))
     (if print-started
 	(print-cursors))))
 
-(with-objs (user! line!)
+(with-objs (line!)
   ;; loop word-start-cursor until it matches to word-end-cursor while binding char
   (defmacro loop-char-in-curr-word ((char!) &body body)
     `(loop-until (my-list:same-indices? word-start-cursor word-end-cursor)
@@ -456,7 +457,7 @@ cursor-list of user!
   (defun curr-word-fits-in-new-render-line ()
     (<= curr-word-width window-width)))
 
-(with-objs (user! line!)
+(with-objs (user! text! line!)
   (defun advance-word ()
     (if (and (curr-word-overflows-render-line)
              (curr-word-fits-in-new-render-line))
@@ -464,12 +465,16 @@ cursor-list of user!
     (loop-char-in-curr-word (char!)
       (advance-char))))
 
-(with-objs (user! line!)
+(with-objs (line!)
+  (defun init-line-variables ()
+    (my-list:move-cursor-to-head char-list word-start-cursor)
+    (my-list:move-cursor-to-head char-list word-end-cursor)
+    (setf curr-word-width 0.0)))
+
+(with-objs (line!)
   (defmacro loop-char-in-line ((char!) &body body)
     `(progn
-       (my-list:move-cursor-to-head char-list word-start-cursor)
-       (my-list:move-cursor-to-head char-list word-end-cursor)
-       (setf curr-word-width 0.0)
+       (init-line-variables)
        (loop-until (my-list:is-cursor-last char-list word-end-cursor)
          (my-list:move-cursor-to-next char-list word-end-cursor)
          (objlet* ((,char! (my-list:get-data word-end-cursor)))
@@ -481,7 +486,7 @@ cursor-list of user!
   (defun is-space-char ()
     (member char *space-chars*)))
 
-(with-objs (user! line! char!)
+(with-objs (user! text! line!)
   (defun advance-line ()
     (loop-char-in-line (char!)
       (cond ((is-space-char)
@@ -490,25 +495,84 @@ cursor-list of user!
              (my-list:move-cursor-to-next char-list word-start-cursor)
              (my-list:move-cursor-to-next char-list word-start-cursor)
              (advance-space))
-
 	    ((my-list:is-cursor-last char-list word-end-cursor)
              (advance-word))
-
 	    (t
              (increase-word-width))))))
 
 (with-objs (user!)
+  (defun init-window-variables ()
+    (setf x-line 0.0)
+    (setf y-line 0.0)
+    (my-tree:move-cursor-to-index line-tree text-iter-cursor (1- render-start-line-index))
+    (setf curr-render-line-row-index 1)
+    (setf print-started nil)))
+
+(with-objs (user!)
+  (defun insert-new-line ()
+    (setf x-line 0.0)
+    (setf curr-render-line-row-index 1)
+    (if print-started
+	(progn
+	  (incf y-line curr-render-line-height)
+	  (init-render-line-height-variables)
+	  (if (>= y-line window-height)
+	      (error 'render-finished))))))
+
+(with-objs (text!)
+  (defmacro loop-from-iter-line-in-text ((line!) &body body)
+    `(loop-until (my-tree:is-cursor-last line-tree text-iter-cursor)
+       (my-tree:move-cursor-to-next line-tree text-iter-cursor)
+       (objlet* ((,line! (my-tree:get-data text-iter-cursor)))
+	 ,@body))))
+
+(with-objs (user!)
   (defun print-text ()
     (handler-case
-	(objlet* ((text! text))
-	  (setf x-line 0.0)
-	  (setf y-line 0.0)
-	  (my-tree:move-cursor-to-index line-tree text-iter-cursor (1- render-start-line-index))
-	  (setf curr-render-line-row-index 1)
-	  )
-      (render-finished (c)
+	(progn
+	  (init-window-variables)
+	  (init-render-line-height-variables)
+	  (objlet* ((text! text))
+	    (my-tree:move-cursor-to-index line-tree text-iter-cursor (1- render-start-line-index))
+	    (loop-from-render-line-in-text (line!)
+	      (advance-line)
+	      (insert-new-line))))
+
+      (y-line-exceeded-window-height (c)
 	(format t "~s~%" c)))))
 
+(with-objs (text! line!)
+  (defun create-cursor! (line-index char-index)
+    (objlet* ((cursor! (make-cursor!)))
+      (setf text-cursor (my-tree:create-cursor! line-tree line-index))
+      (setf line-cursor (my-list:create-cursor! char-list char-index)))))
+
+(with-objs (user! text!)
+  (defun add-primary-cursor (line-index char-index)
+    (if (and (> line-index 0)
+	     (<= line-index (my-tree:get-size line-tree)))
+	(my-tree:move-cursor-to-index line-tree text-iter-cursor line-index)
+	(progn
+	  (format t "my-text:push-cursor! line-index out of bound.~%")
+	  (return-from add-primary-cursor)))
+
+    (objlet* ((line! (my-tree:get-data text-iter-cursor)))
+      (if (and (> char-index 0)
+	       (<= char-index (my-list:get-size char-list)))
+	  (objlet* ((cursor! (create-cursor! line-index char-index)))
+            (my-tree:push-cursor! line-tree text-cursor)
+            (my-list:push-cursor! char-list line-cursor)
+	    ;; update user
+	    (setf primary-cursor cursor!)
+	    (push cursor! cursor-list))
+	  (progn
+	    (format t "my-text:push-cursor! char-index out of bound.~%")
+	    (return-from add-primary-cursor))))))
+
+(with-objs (user! text!)
+  (defun remove-all-but-primary-cursor ()
+    (objdolist (cursor! cursor-list)
+      (if (not-eq )))))
 
 
 
@@ -670,7 +734,7 @@ cursor-list of user!
   (until (or (my-tree:is-cursor-last line-tree text-iter-cursor)
 	     (< height-vacancy (get-line-height user!)))
     ;; skip head
-    (my-tree:move-cursor-to-next line-tree text-iter-cursor)
+	 (my-tree:move-cursor-to-next line-tree text-iter-cursor)
     (format t "height vacancy : ~a width vacancy : ~a~%~a~%" height-vacancy width-vacancy text-iter-cursor)
 
     (objlet* ((line! (my-tree:get-data text-iter-cursor)))      
