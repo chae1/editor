@@ -11,6 +11,10 @@
   ;; (load (merge-pathnames "src/server.lisp" cwd))
   )
 
+(let ((cwd (uiop/os:getcwd)))
+  (load (merge-pathnames "src/text-manager.lisp" cwd))
+  )
+
 (with-compilation-unit (:policy '(optimize debug))
   )
 
