@@ -97,3 +97,12 @@
                      (setf (cdr ,curr) (cdr ,next))
                      (return ,container)))))
          nil)))
+
+(export 'deftestfun)
+(defmacro deftestfun (name lambda-list &body body)
+  `(defun ,name ,lambda-list
+     (handler-case
+	 (progn
+	   ,@body)
+       (error (o)
+	 (format t "~a~%" o)))))

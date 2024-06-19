@@ -9,6 +9,9 @@
 
 (in-package :my-text)
 
+(export `(user! text! cursor! line! font! char! glyph! bounding-box!))
+(declaim (special user! text! cursor! line! font! char! glyph! boundin1g-box!))
+
 ;; font
 
 (defobj bounding-box!
@@ -111,7 +114,7 @@
       (objlet* ((dirname (car (last (pathname-directory path))))
 		(font! (get-font dirname)))
 	(setf fontname dirname)
-	(dolist (file-path (uiop:directory-files path))
+	(objdolist (file-path (uiop:directory-files path))
 	  (parse-file font! file-path))
 	(setf (gethash #\Tab glyph-table) (gethash #\  glyph-table)))
       (break (with-output-to-string (out)
@@ -153,8 +156,8 @@ cursor-list of user!
   ;; normalized scale to pixel scale
   (font-size 10.0 :type single-float)
   ;; pixel scale
-  (x-line-gap 1.0 :type single-float)
-  (y-line-gap 1.0 :type single-float))
+  (x-line-gap 0.0 :type single-float)
+  (y-line-gap 0.0 :type single-float))
 
 (defobj line!
   (char-list nil :type my-list:multi-cursor-list!)
@@ -187,12 +190,6 @@ cursor-list of user!
   (text-iter-cursor nil :type (or null my-tree:cursor!))
   (user-list nil :type (or null cons)))
 
-(export 'create-text!)
-(defobjfun create-text! ()
-  (objlet* ((line-tree (my-tree:create-multi-cursor-tree!)))
-    (make-text! :line-tree line-tree
-		:text-iter-cursor (my-tree:get-default-cursor line-tree))))
-
 (defmethod print-object ((obj text!) out)
   (print-unreadable-object (obj out :type t)
     (format out "~a" (text!-file-path obj))))
@@ -210,14 +207,11 @@ cursor-list of user!
             (if (cursor!-text-cursor c) (my-tree:index-of (cursor!-text-cursor c)))
             (if (cursor!-line-cursor c) (my-list:index-of (cursor!-line-cursor c))))))
 
-(export `(text! line! font! char! glyph! bounding-box!))
-(declaim (special text! line! font! char! glyph! bounding-box!))
-
 (with-objs (char!)
   (defun get-char-advance ()
     (objlet* ((glyph! glyph)
               (char-bounding-box! bounding-box))
-      (+ x-line-gap (* (- char-x-max char-x-min) font-size)))))
+      (* (+ x-line-gap (- char-x-max char-x-min)) font-size))))
 
 (with-objs (char!)
   (defun get-space-advance ()
@@ -242,7 +236,19 @@ cursor-list of user!
   (defun insert-char-in-line (char!)
     (my-list:insert-data-after-cursor char-list line-iter-cursor char!)))
 
-;; get pos and length in vulkan x, y coordinate ranged from -1.0 to 1.0
+(export 'create-text!)
+(defobjfun create-text! ()
+  (objlet* ((line-tree (my-tree:create-multi-cursor-tree!))
+	    (text! (make-text! :line-tree line-tree
+			       :text-iter-cursor (my-tree:get-default-cursor line-tree))))
+    (insert-line-in-text (create-line!))
+    text!))
+
+(defparameter *default-font* (get-font "UbuntuMono-R"))
+
+(export 'get-default-font)
+(defun get-default-font ()
+  *default-font*)
 
 (export 'make-user!)
 (defobj user!
@@ -254,12 +260,12 @@ cursor-list of user!
   (text nil :type (or null text!))
 
   ;; char variables
-  (curr-font nil :type (or null font!))
+  (curr-font (get-default-font) :type font!)
   ;; normalized scale to pixel scale
   (curr-font-size 10.0 :type single-float)
   ;; pixel scale
-  (curr-x-line-gap 1.0 :type single-float)
-  (curr-y-line-gap 1.0 :type single-float)
+  (curr-x-line-gap 0.05 :type single-float)
+  (curr-y-line-gap 0.1 :type single-float)
   
   ;; pixel scale
   (window-width 400.0 :type single-float)
@@ -285,21 +291,15 @@ cursor-list of user!
   (primary-cursor nil :type (or null cursor!))
   (cursor-list nil :type (or null cons)))
 
-(defparameter *user0* (make-user! :username "user0" :curr-font (get-font "UbuntuMono-R")))
-
-(defobjfun load-text (text! file-path-in)
-  (setf file-path file-path-in)
-  (insert-line-in-text (create-line!))
+(with-objs (user!)
+  (defobjfun load-text (text! file-path-in)
+    (setf file-path file-path-in)  
     (loop-char-in-file (char fin file-path-in)
       (if (eq char #\Newline)
           (insert-line-in-text (create-line!))
-          (objlet* ((line! (my-tree:get-data text-iter-cursor))
-		    (user! *user0*))
+          (objlet* ((line! (my-tree:get-data text-iter-cursor)))
 	    (insert-char-in-line (create-char! char)))))
-  text!)
-
-(export `(user!))
-(declaim (special user!))
+    text!))
 
 (with-objs (user!)
   (defun create-char! (char)
@@ -346,15 +346,14 @@ cursor-list of user!
   (defun update-render-line-height-variables ()
     (objlet* ((glyph! glyph)
 	      (char-bounding-box! bounding-box))
-      (update-variable curr-render-line-base (* char-y-max font-size) #'>)
-      (update-variable curr-render-line-height (+ y-line-gap curr-render-line-base (- char-y-min)) #'>))))
+      (update-variable curr-render-line-base (* (+ y-line-gap char-y-max) font-size) #'>)
+      (update-variable curr-render-line-height (+ curr-render-line-base (* (- char-y-min) font-size)) #'>))))
 
 ;; pixel scale to vk scale
 (with-objs (user!)
   (defun get-x-in-vk-coord (x)
     (+ -1 (* (/ x window-width) 2))))
 
-;; pixel scale to vk scale
 (with-objs (user!)
   (defun get-y-in-vk-coord (y)
     (+ -1 (* (/ y window-height) 2))))
@@ -369,13 +368,13 @@ cursor-list of user!
 
 (with-objs (user! char!)
   (defun get-char-x-in-vk-coord ()
-    (get-x-in-vk-coord (+ x-line x-line-gap))))
+    (get-x-in-vk-coord (+ x-line (* x-line-gap font-size)))))
 
 (with-objs (user! char!)
   (defun get-char-y-in-vk-coord ()
     (objlet* ((glyph! glyph)
 	      (char-bounding-box! bounding-box))
-      (get-y-in-vk-coord (+ y-line y-line-gap curr-render-line-base (- char-y-min))))))
+      (get-y-in-vk-coord (+ y-line curr-render-line-base (* (- char-y-min) font-size))))))
 
 (with-objs (user! char!)
   (defun get-char-width-in-vk-coord ()
@@ -469,27 +468,18 @@ cursor-list of user!
     ;; (format t "advance-char~%")
     (if (curr-char-overflows-render-line)
         (insert-new-render-line))
-    (incf x-line (get-char-advance))
-    (decrease-word-width)
     (if print-started
 	(progn
 	  (print-char)
-	  (print-cursors)
-	  (update-render-line-height-variables)))))
+	  (print-cursors)))
+    (incf x-line (get-char-advance))
+    (decrease-word-width)))
 
 (with-objs (user! text! line! char!)
   (defun advance-space ()
     (incf x-line (get-space-advance))
     (if print-started
 	(print-cursors))))
-
-(with-objs (line!)
-  ;; loop word-start-cursor until it matches to word-end-cursor while binding char
-  (defobjmacro loop-char-in-curr-word ((char!) &body body)
-    `(loop-until (my-list:same-indices? word-start-cursor word-end-cursor)
-       (my-list:move-cursor-to-next char-list word-start-cursor)       
-       (objlet* ((,char! (my-list:get-data word-start-cursor)))
-         ,@body))))
 
 (with-objs (user! line!)
   (defun curr-word-overflows-render-line ()
@@ -498,6 +488,14 @@ cursor-list of user!
 (with-objs (user! line!)
   (defun curr-word-fits-in-new-render-line ()
     (<= curr-word-width window-width)))
+
+(with-objs (line!)
+  ;; loop word-start-cursor until it matches to word-end-cursor while binding char
+  (defobjmacro loop-char-in-curr-word ((char!) &body body)
+    `(loop-until (my-list:same-indices? word-start-cursor word-end-cursor)
+       (my-list:move-cursor-to-next char-list word-start-cursor)       
+       (objlet* ((,char! (my-list:get-data word-start-cursor)))
+         ,@body))))
 
 (with-objs (user! text! line!)
   (defun advance-word ()
@@ -525,7 +523,7 @@ cursor-list of user!
 
 (with-objs (user! text! line!)
   (defun advance-line ()
-    ;; (format t "advance-line~%")
+    ;; (format t "(advance-line) ~a~%" line!)
     (loop-char-in-line (char!)
       (if (is-space-char)
 	  (progn
@@ -535,9 +533,13 @@ cursor-list of user!
             (my-list:move-cursor-to-next char-list word-end-cursor)
             (advance-space))
 	  (progn
+	    (if print-started
+		(update-render-line-height-variables))
 	    (increase-word-width)
 	    (if (my-list:is-cursor-last char-list word-end-cursor)
 		(advance-word)))))))
+
+(deftestfun )
 
 (with-objs (text!)
   (defobjmacro loop-from-iter-line-in-text ((line!) &body body)
@@ -555,18 +557,20 @@ cursor-list of user!
 	  (init-render-line-height-variables)
 	  (objlet* ((text! text))
 	    (loop-from-iter-line-in-text (line!)
+	      ;; (format t "(get-render-msg) line ~a~%" line!)
 	      (advance-line)
 	      (insert-new-line))))
       (y-line-exceeded-window-height (c)
-	(format t "~s~%" c)))
-
+	;; (format t "~s~%" c)
+	))
     (get-output-stream-string osstream)))
 
 (with-objs (text! line!)
   (defun create-cursor! (line-index char-index)
     (objlet* ((cursor! (make-cursor!)))
       (setf text-cursor (my-tree:create-cursor! line-tree line-index))
-      (setf line-cursor (my-list:create-cursor! char-list char-index)))))
+      (setf line-cursor (my-list:create-cursor! char-list char-index))
+      cursor!)))
 
 (with-objs (user! text!)
   (defun add-primary-cursor (line-index char-index)
@@ -574,11 +578,12 @@ cursor-list of user!
 	     (<= line-index (my-tree:get-size line-tree)))
 	(my-tree:move-cursor-to-index line-tree text-iter-cursor line-index)
 	(progn
-	  (format t "my-text:push-cursor! line-index out of bound.~%")
+	  (format t "(add-primary-cursor) line-index ~a should be greater than ~a and less or equal to ~a.~%" line-index 0 (my-tree:get-size line-tree))
+	  (format t "max ~a~%" (my-tree:get-size line-tree))
 	  (return-from add-primary-cursor)))
 
     (objlet* ((line! (my-tree:get-data text-iter-cursor)))
-      (if (and (> char-index 0)
+      (if (and (>= char-index 0)
 	       (<= char-index (my-list:get-size char-list)))
 	  (objlet* ((cursor! (create-cursor! line-index char-index)))
             (my-tree:push-cursor! line-tree text-cursor)
@@ -587,7 +592,7 @@ cursor-list of user!
 	    (setf primary-cursor cursor!)
 	    (push cursor! cursor-list))
 	  (progn
-	    (format t "my-text:push-cursor! char-index out of bound.~%")
+	    (format t "(add-primary-cursor) char-index ~a out of bound.~%" char-index)
 	    (return-from add-primary-cursor))))))
 
 (with-objs (user! text!)
@@ -596,9 +601,6 @@ cursor-list of user!
     (let ((line-index (my-tree:index-of text-cursor))
           (char-index (my-list:index-of line-cursor)))
       (add-primary-cursor line-index char-index)))))
-
-(export `(cursor!))
-(declaim (special cursor!))
 
 (with-objs (text! line! cursor!)
   (defun remove-cursor-in-text ()
@@ -627,7 +629,7 @@ cursor-list of user!
   (defun link-user ()
     (push user! user-list)
     (setf text text!)
-    (add-primary-cursor)))
+    (add-primary-cursor 1 0)))
 
 (export 'unlink-user)
 (with-objs (user! text!)
@@ -704,7 +706,8 @@ cursor-list of user!
 
 (with-objs (user! cursor!)
   (defun move-cursor-down ()
-    (objlet* ((line! (my-tree:get-data text-cursor)))
+    (objlet* ((text! text)
+	      (line! (my-tree:get-data text-cursor)))
       (if (my-tree:is-cursor-last line-tree text-cursor)
           nil
           (progn
@@ -730,6 +733,8 @@ cursor-list of user!
 (export 'insert-char-after-cursors)
 (with-objs (user!)
   (defun insert-char-after-cursors (char)
+    (print char)
+    (print cursor-list)
     (objdolist (cursor! cursor-list)
       (insert-char-after-cursor char))))
 

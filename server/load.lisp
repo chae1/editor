@@ -8,15 +8,11 @@
   (load (merge-pathnames "src/multi-cursor-list.lisp" cwd))
   (load (merge-pathnames "src/multi-cursor-tree.lisp" cwd))
   (load (merge-pathnames "src/text-manager.lisp" cwd))
-  ;; (load (merge-pathnames "src/server.lisp" cwd))
+  (load (merge-pathnames "src/server.lisp" cwd))
   )
 
-(let ((cwd (uiop/os:getcwd)))
-  (load (merge-pathnames "src/text-manager.lisp" cwd))
-  )
+;; (with-compilation-unit (:policy '(optimize debug))
+;;   )
 
-(with-compilation-unit (:policy '(optimize debug))
-  )
-
-(with-compilation-unit (:policy '(optimize speed)) 
-  )
+;; (with-compilation-unit (:policy '(optimize speed)) 
+;;   )

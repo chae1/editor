@@ -149,9 +149,11 @@ void main() {
     coverage = sqrt(clamp(abs(coverage) / 2, 0.0, 1.0));
 
     outColor = vec4((vec3(1.0) * (1.0 - coverage) + fragColor.rgb * coverage) , fragColor.a);
+
+    // outColor = fragColor;  
     
-    if (coverage == 0.0)
-	debugPrintfEXT("fragTexcoord %1.2v2f\n outColor %1.2v4f\n coverage %f\n", fragTexCoord, outColor, coverage);
+    // if (coverage == 0.0)
+    // 	debugPrintfEXT("fragTexcoord %1.2v2f\n outColor %1.2v4f\n coverage %f\n", fragTexCoord, outColor, coverage);
     
     // if (0.1 < fragTexCoord.x && fragTexCoord.x < 0.15 && 0.1 < fragTexCoord.y && fragTexCoord.y < 0.15)
     // 	debugPrintfEXT("fragTexcoord %1.2v2f\n fragColor %1.2v4f\n coverage %f\n", fragTexCoord, fragColor, coverage);

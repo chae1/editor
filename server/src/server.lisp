@@ -37,10 +37,14 @@
   (gethash msg *msg-handle-table*))
 
 (with-objs (user!)
+  (defun read-line-from-socket ()
+    (read-line socket-stream-in)))
+
+(with-objs (user!)
   (defobjmacro set-msg-handle (init-msg variables &body body)
     `(setf (gethash ,init-msg *msg-handle-table*)
 	   (lambda ()
-	     (let ,(mapcar (lambda (el) (list el `(read-line socket-stream-in)))
+	     (let ,(mapcar (lambda (el) (list el `(read-line-from-socket)))
 		    variables)
 	       ,@body)))))
 
@@ -48,8 +52,8 @@
   (set-msg-handle "login" (username-in width-in height-in font-size-in)
     (setf state 'normal)
     (setf username username-in)
-    (setf font (get-font "UbuntuMono-R"))
-    (setf font-size (read-from-string font-size-in))
+    (setf curr-font (get-font "UbuntuMono-R"))
+    (setf curr-font-size (float (read-from-string font-size-in)))
     (setf window-width (float (read-from-string width-in)))
     (setf window-height (float (read-from-string height-in)))
     (setf cursor-color #(0.0 0.2 0.0))
@@ -109,6 +113,8 @@
     ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
     (let ((key (read-from-string key))
 	  (action (read-from-string action)))
+      (format t "key ~a, action ~a received.~%" key action)
+      
       ;; 0: release, 1: push
       (case key
 	;; shift
@@ -130,7 +136,7 @@
 
 	;; enter
 	(257 (case action
-	       (1 (insert-new-line-after-cursor))))
+	       (1 (insert-new-line-after-cursors))))
 
 	;; backspace
 	(259 (case action
@@ -161,15 +167,20 @@
 		     (1 (progn
 			  (case state
 			    ('normal (if-let ((char (gethash key *normal-state-insert-key-table*)))
-				       (insert-char-after-cursors char)))
+				       (progn
+					 (format t "insert char ~a~%" char)
+					 (insert-char-after-cursors char))))
 			    ('extend (if-let ((char (gethash key *extend-state-insert-key-table*)))
-				       (insert-char-after-cursors char)))))))))
+				       (progn
+					 (format t "insert char ~a~%" char)
+					 (insert-char-after-cursors char))))))))))
 
       ;; send render message
       (case action
 	(1 (objlet* ((text! text))
 	     (objdolist (user! user-list)
 	       (send-render-msg))
+	     ;; (format t "~a~%" line-tree)
 	     ;; (format t "------------------------------------------------~%")
 	     ))))
     
@@ -192,73 +203,74 @@
       (funcall func)
       (format t "handle for msg ~a not defined~%" init-msg))))
 
-(defmacro thread-with-handler (form exit-form &rest cases)
-  `(sb-thread:make-thread
-    (lambda ()
-      (unwind-protect
-	   (handler-case
-	       ,form
-	     ,@cases)
-	,exit-form))))
-
 (with-objs (text!)
   (defun handle-connect (connect socket-stream-in)
     (objlet* ((user! (make-user! :connect connect :socket-stream-in socket-stream-in)))
-      (thread-with-handler
-       (loop
-	 (let ((init-msg (read-line socket-stream-in)))
-	   (handle-msg init-msg)))
+      (unwind-protect
+	   (handler-case
+	       (loop
+		(let ((init-msg (read-line socket-stream-in)))
+		  (handle-msg init-msg)))
+	     (end-of-file (o)
+	       (format t "~a~%" o)
+	       )
+	     (sb-int:simple-stream-error (o)
+	       (format t "~a~%" o)
+	       ))
+	(progn
+	  ;; (format t "~%")
+	  (format t "(handle-connect) ~a exiting~%" username)
+	  (format t "(handle-connect) closing connect ~a~%" connect)
+	  (sb-bsd-sockets:socket-close connect)
+	  (format t "(handle-connect) unlinking user and text~%")
+	  (unlink-user)
+	  (format t "(handle-connect) exiting handle-connect thread for ~a~%" connect))))))
 
-       ;; exit form
-       (progn
-	 ;; (format t "~%")
-	 (format t "unlinking user and text~%")
-	 (unlink-user)
-	 (format t "(handle-connect) closing connect ~a~%" connect)
-	 (sb-bsd-sockets:socket-close connect)
-	 (format t "(handle-connect) exiting handle-connect thread for ~a~%" connect))
+(defparameter *socket* nil)
+(defparameter *text* nil)
 
-       ;; handler cases
-       (end-of-file (o)
-		    (format t "~a~%" o)
-		    )
-       (sb-int:simple-stream-error (o)
-				   (format t "~a~%" o)
-				   )))))
-
-(defvar *socket* nil)
-(defvar *text* nil)
+(defmacro run-thread (&body body)
+  `(sb-thread:make-thread
+    (lambda ()
+      ,@body)))
 
 (defun run-server (&key (ip #(127 0 0 1)) (port 20741))
-  (setf *socket* (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
-  (setf *text* (create-text!))
-  (objlet* ((text! *text*)
-	    (out *standard-output*))
-    (thread-with-handler
-     (progn
-       (setf (sb-bsd-sockets:sockopt-reuse-address *socket*) t)
-       (setf (sb-bsd-sockets:non-blocking-mode *socket*) t)
-       (sb-bsd-sockets:socket-bind *socket* ip port)
-       (sb-bsd-sockets:socket-listen *socket* 1)
+  (setf *close-server-flag* nil)
+  (run-thread
+    (unwind-protect
+	 (handler-case
+	     (progn
+	       (setf *socket* (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
+	       (setf (sb-bsd-sockets:non-blocking-mode *socket*) nil)
+	       (setf (sb-bsd-sockets:sockopt-reuse-address *socket*) t)
 
-       (format out "server start listening to ~a~%" *socket*)
-       ;; wait for new connect
-       (loop
-	 (if-let ((connect (sb-bsd-sockets:socket-accept *socket*)))
-	   (let ((socket-stream-in (sb-bsd-sockets:socket-make-stream connect :input t)))
-	     (format t "new connect~%")
-	     (handle-connect connect socket-stream-in)))))
-     ;; exit form
-     (progn
-       (format out "(run-text-server!) exiting server thread~%"))
-     ;; handler cases
-     (sb-bsd-sockets:bad-file-descriptor-error (o)
-					       (format t "(run-text-server!) ~a~%" o)
-					       )
-     (sb-bsd-sockets:address-in-use-error (o)
-					  (format t "(run-text-server!) ~a~%" o)
-					  ))))
+	       (sb-bsd-sockets:socket-bind *socket* ip port)
+	       (sb-bsd-sockets:socket-listen *socket* 1)
+	       
+	       (format t "(run-server) start listening to ~a~%" *socket*)
 
-(defun close-server ()
-  (format t "(stop-text-server!) closing server listeing to ~a~%" *socket*)
-  (sb-bsd-sockets:socket-close *socket*))
+	       (setf *text* (create-text!))
+	       
+	       ;; wait for new connect
+	       (objlet* ((text! *text*))
+		 (loop
+		   (if-let ((connect (sb-bsd-sockets:socket-accept *socket*)))
+		     (let ((socket-stream-in (sb-bsd-sockets:socket-make-stream connect :input t)))
+		       (format t "new connect~%")
+		       (handle-connect connect socket-stream-in))))))
+	   (sb-bsd-sockets:bad-file-descriptor-error (o)
+	     (format t "(run-server) ~a~%" o)
+	     )
+	   (sb-bsd-sockets:address-in-use-error (o)
+	     (format t "(run-server) ~a~%" o)
+	     ))
+      (progn
+	(format t "(run-server) closing socket~%")
+	(sb-bsd-sockets:socket-close *socket*)
+	(format t "(run-server) exiting server thread~%")
+	))))
+
+(defun print-all-users ()
+  (objlet* ((text! *text*))
+    (objdolist ((user! user-list))
+      (format t "~a~%" user-name))))

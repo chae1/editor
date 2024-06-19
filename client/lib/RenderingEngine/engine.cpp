@@ -823,9 +823,9 @@ void Engine::createTriangleIndexBuffer() {
 }
 
 void Engine::updateTriangleIndexBuffer() {
-    triangleIndices = std::vector<uint32_t> { 0, 1, 3, 1, 2, 3 };
+    triangleIndices = std::vector<uint32_t> { 0, 3, 1, 1, 3, 2 };
     
-  VkDeviceSize bufferSize = sizeof(uint32_t) * triangleIndices.size();
+    VkDeviceSize bufferSize = sizeof(uint32_t) * triangleIndices.size();
     memcpy(triangleIndexBufferMapped, triangleIndices.data(), bufferSize);
 }
 
@@ -962,14 +962,17 @@ void Engine::createFontInfoStorageBuffer() {
     for (size_t i = 0; i < bufferSize; i++) {
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	createBuffer(fontInfoStorageBuffersSize[i], VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	// fmt::print("1\n");
+	createBuffer(max(fontInfoStorageBuffersSize[i], static_cast<VkDeviceSize>(1)), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, fontInfoStorageBuffersSize[i], 0, &data);
 	memcpy(data, buffersData[i], (size_t)fontInfoStorageBuffersSize[i]);
 	vkUnmapMemory(device, stagingBufferMemory);
 
-	createBuffer(fontInfoStorageBuffersSize[i], VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, fontInfoStorageBuffers[i], fontInfoStorageBuffersMemory[i]);
+	// fmt::print("2\n");
+	createBuffer(max(fontInfoStorageBuffersSize[i], static_cast<VkDeviceSize>(1)), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, fontInfoStorageBuffers[i], fontInfoStorageBuffersMemory[i]);
 	copyBuffer(stagingBuffer, fontInfoStorageBuffers[i], fontInfoStorageBuffersSize[i]);
 
 	vkDestroyBuffer(device, stagingBuffer, nullptr);
@@ -1223,7 +1226,7 @@ void Engine::createTriangleGraphicsPipeline() {
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthTestEnable = VK_FALSE;
     depthStencil.depthWriteEnable = VK_TRUE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
@@ -1400,8 +1403,8 @@ void Engine::createTextGraphicsPipeline() {
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_TRUE;
-    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
     colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
     colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;

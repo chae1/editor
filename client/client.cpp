@@ -22,7 +22,7 @@ void socket_listener();
 
 int width = 500;
 int height = 400;
-int font_size = 40;
+int font_size = 20;
 
 Engine engine { width, height, "editor", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
 
@@ -65,7 +65,6 @@ std::string get_token(std::stringstream& ss) {
 
 bool draw_flag = false;
 
-// listening thread alone will call this function
 void parse_msg_and_run_command() {
     std::stringstream ss(client.buf);
     std::string token = get_token(ss);
@@ -79,24 +78,35 @@ void parse_msg_and_run_command() {
 	    draw_flag = true;
 	    
 	} else if (token == "end") {
-	    // engine.updateStorageBuffer();
 	    engine.textStorageBufferUpdateFlag = true;
 	    engine.textStorageBufferMutex.unlock();
 	    draw_flag = false;
+
+	    int char_num = engine.characterObjects.size();
+	    fmt::print("char_num: {}\nmaxCharacterCount: {}\n", char_num, engine.maxCharacterCount);
+	    
+	    if (char_num > engine.maxCharacterCount) {
+		engine.maxCharacterCount = char_num * 2;
+		engine.textStorageBufferRecreateFlag = true;
+	    }
 	}
 	
-    } else {	
+    } else {
 	if (draw_flag) {
 	    if (token == "char") {
 		char c;
-		float char_left, char_up, char_width, char_height;
-		ss >> c >> char_left >> char_up >> char_width >> char_height;
+		float char_x, char_y, char_width, char_height;
+		ss >> c >> char_x >> char_y >> char_width >> char_height;
 
-		fmt::print("{}, {}, {}, {}\n", char_left, char_up, char_width, char_height);
-		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_left + char_width/2.0f, char_up + char_height/2.0f, 1.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
+		fmt::print("char {}, {}, {}, {}, {}\n", c, char_x, char_y, char_width, char_height);
+
+		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
+		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(1.0f, -1.0f, 0.0f), 1))));
+		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(1.0f, 1.0f, 0.0f), 1))));
+		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, 1.0f, 0.0f), 1))));
 		
 		CharacterObject ssbo;
-		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(char_left, char_up, 0.1f)) * glm::scale(glm::mat4(1.0f), glm::vec3(char_width/2.0f, char_height/2.0f, 0.1f));
+		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(char_width/2.0f, char_height/2.0f, 1.0f));
 		ssbo.view = glm::mat4(1.0f);
 		ssbo.proj = glm::mat4(1.0f);
 		ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -108,12 +118,7 @@ void parse_msg_and_run_command() {
 	    } else if (token == "cursor") {
 		
 	    }
-	} else {
-	    if (token == "max-obj-num") {
-		ss >> engine.maxCharacterCount;
-		engine.textStorageBufferRecreateFlag = true;
-	    }
-	}
+	} else {}
     }
 }
 
@@ -136,6 +141,7 @@ int main(int argc, char* argv[]) {
 	engine.init_vulkan();
 
 	client.init(ip_port);
+	
 	std::thread { socket_listener }.detach();
 	
 	client.send_msg("login");

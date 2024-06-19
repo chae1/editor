@@ -28,9 +28,9 @@ layout(location = 2) out int fragCharId;
 void main() {
     StorageBufferObject ssbo = ssbos[gl_InstanceIndex];
     
-    gl_Position =  ubo.proj * ubo.view * ubo.model * ssbo.model * inPos;
-    // gl_Position =  ssbo.model * inPos;
-    // gl_Position =  inPos;
+    // gl_Position = ubo.proj * ubo.view * ubo.model * ssbo.model * inPos;
+    gl_Position = ssbo.model * inPos;
+    // gl_Position = inPos;
 
     fragColor = ssbo.color;
     fragTexCoord = inTexCoord;
@@ -40,7 +40,7 @@ void main() {
 
     // debugPrintfEXT("\nvertex shader\n");
     // debugPrintfEXT("gl_VertexIndex %d\n", gl_VertexIndex);
-    debugPrintfEXT("inPos %1.2v4f\n", inPos);
+    // debugPrintfEXT("inPos %1.2v4f\n", inPos);
 
     // debugPrintfEXT("ubo.model0 %1.2v4f\n", ubo.model[0]);
     // debugPrintfEXT("ubo.model1 %1.2v4f\n", ubo.model[1]);
@@ -57,7 +57,7 @@ void main() {
     // debugPrintfEXT("ubo.proj2 %1.2v4f\n", ubo.proj[2]);
     // debugPrintfEXT("ubo.proj3 %1.2v4f\n", ubo.proj[3]);    
     
-    // debugPrintfEXT("vertex %d gl_Position %1.2v4f\n", gl_VertexIndex, gl_Position);
+    // debugPrintfEXT("text vertex %d gl_Position %1.2v4f\n", gl_VertexIndex, gl_Position);
     // debugPrintfEXT("color %1.2v4f\n", ssbo.color);
     // debugPrintfEXT("texCoord %1.2v2f\n", inTexCoord);
 }

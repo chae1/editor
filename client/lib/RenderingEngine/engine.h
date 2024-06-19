@@ -132,24 +132,31 @@ namespace vk_engine {
 	    
 	    createCommandPool();
 	    createCommandBuffers();
-
+	    
+	    // fmt::print("0\n");
 	    createGlobalTransformMatrixUniformBuffers();
 
+	    // fmt::print("1\n");
 	    createTriangleVertexBuffer();
 	    updateTriangleVertexBuffer();
-	    
+
+	    // fmt::print("2\n");
 	    createTriangleIndexBuffer();
 	    updateTriangleIndexBuffer();
-	    
+
+	    // fmt::print("3\n");
 	    createGlyphBoxVertexBuffer();
 	    createGlyphBoxIndexBuffer();
 
+	    // fmt::print("4\n");
 	    createTextStorageBuffer();
 	    updateTextStorageBuffer();
 
-	    // glyphs' bezier curves information for vector rendering
+	    // fmt::print("5\n");
+	    // glyphs' bezier curves information
 	    createFontInfoStorageBuffer();
-	    
+
+	    // fmt::print("6\n");
 	    createTriangleDescriptorSetLayout();
 	    createTriangleDescriptorPool();
 	    allocateTriangleDescriptorSets();
@@ -251,17 +258,17 @@ namespace vk_engine {
 	void* triangleIndexBufferMapped;
 
 	const std::vector<GlyphBoxVertex> glyphBoxVertices {
-	    { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
-	    { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
-	    { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-	    { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }
+	    { { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+	    { { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+	    { { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+	    { { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }
 	};
 
 	VkBuffer glyphBoxVertexBuffer;
 	VkDeviceMemory glyphBoxVertexBufferMemory;
 
 	const std::vector<uint32_t> glyphBoxIndices {
-	    0, 1, 3, 1, 2, 3
+	    0, 3, 1, 1, 3, 2
 	};
 	
 	VkBuffer glyphBoxIndexBuffer;

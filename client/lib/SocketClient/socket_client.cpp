@@ -38,42 +38,10 @@ void Socket_client::init(const std::string& ip_port) {
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (socket_fd == -1)
 	    continue;
-
-	// Set socket to non-blocking mode
-	// int flags = fcntl(socket_fd, F_GETFL, 0);
-	// if (flags == -1) {
-        //     throw std::runtime_error("Error getting socket flags\n");
-	// }
-	// if (fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-        //     throw std::runtime_error("Error setting socket to non-blocking mode\n");
-	// }
 	
 	if (connect(socket_fd, rp->ai_addr, rp->ai_addrlen) != -1) {
 	    connect_succeed = true;
 	    break; 
-	}
-
-	// Wait for connection to complete
-	if (errno == EINPROGRESS) {
-            fd_set writefds;
-            FD_ZERO(&writefds);
-            FD_SET(socket_fd, &writefds);
-        
-            if (select(socket_fd + 1, NULL, &writefds, NULL, NULL) < 0) {
-		std::runtime_error("Error in select\n");
-            }
-
-            if (FD_ISSET(socket_fd, &writefds)) {
-		int so_error;
-		socklen_t len = sizeof so_error;
-		getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &so_error, &len);
-		if (so_error != 0) {
-                    std::runtime_error("Error connecting to server\n");
-		}
-
-		connect_succeed = true;
-		break; 
-            }
 	}
 
 	close (socket_fd);
@@ -184,22 +152,5 @@ void Socket_client::read_msg() {
     }
 
     // fmt::print("begin {} end {}\n", temp_buf_unread_begin, temp_buf_unread_end);
-    // std::cout << "read msg : " << buf << "\n";
-}
-
-bool Socket_client::recv_msg() {
-    // set socket to non blocking mode before use
-    // int flags = MSG_DONTWAIT;
-    int ret = recv(socket_fd, buf, sizeof(buf), 0); 
-    if (ret == -1) {
-	if (errno == EAGAIN || errno == EWOULDBLOCK) {
-	    return false;
-	}
-
-	throw std::runtime_error("recv failed");
-    }
-    
-    // std::cout << "recv returned : " << ret << std::endl;
-    // std::cout << buf << std::endl;
-    return true;
+    std::cout << "read msg : " << buf << "\n";
 }

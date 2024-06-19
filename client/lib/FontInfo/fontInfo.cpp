@@ -14,20 +14,22 @@ namespace fs = std::filesystem;
 using namespace font;
 
 void Curve::print() const {
-    cout << fmt::format("p1({}, {}), p2({}, {}), p3({}, {})\n", p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+    cout << fmt::format("curve: p1({}, {}), p2({}, {}), p3({}, {})\n", p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
 }
 
 void RenderBox::print() const {
-    cout << fmt::format("x_min, y_min, x_max, y_max : {}, {}, {}, {}\n", x_min, y_min, x_max, y_max);
+    cout << fmt::format("render box: x_min, y_min, x_max, y_max : {}, {}, {}, {}\n", x_min, y_min, x_max, y_max);
 }
 
 bool GlyphInfo::operator<(const GlyphInfo& glyph_info) {
     return glyph < glyph_info.glyph;
 }
 
-inline istringstream get_newline(ifstream& fin) {
+istringstream get_newline(ifstream& fin) {
     string str;
     getline(fin, str);
+    // fmt::print("{}\n", str);
+
     return istringstream(str);
 }
 
@@ -68,29 +70,28 @@ void FontInfo::load_font(string str) {
 		line = get_newline(fin);
 		line >> glyph_info.advance_width;
 
-	    } else if (currline_token == "render-box") {
+	    } else if (currline_token == "bounding-box") {
 		line = get_newline(fin);
 		RenderBox& box = glyph_info.render_box;
-		line >> box.x_min >> box.y_min >> box.x_max >> box.y_max;
 
-	    } else if(currline_token == "glyph-info-end") {
+		float x_min, y_min, x_max, y_max;
+		line >> x_min >> y_min >> x_max >> y_max;
+
+		box.x_min = 0;
+		box.y_min = 0;
+		box.x_max = x_max - x_min;
+		box.y_max = y_max - y_min;
+		
+	    } else if (currline_token == "glyph-info-end") {
 		glyph_infos.push_back(glyph_info);
 		
 	    } else if (currline_token == "font") {
 		line = get_newline(fin);
 		line >> name;
 	    
-	    } else if (currline_token == "ttf-path") {
+	    } else if (currline_token == "generated") {
 		line = get_newline(fin);
 		line >> ttf_path;
-	    
-	    } else if (currline_token == "line-height") {
-		line = get_newline(fin);
-		line >> line_height;
-		    
-	    } else if (currline_token == "em") {
-		line = get_newline(fin);
-		line >> em;
 		    
 	    } else if (currline_token == "font-info-end") {}
 	}
@@ -115,7 +116,7 @@ void FontInfo::load_font(string str) {
     }
 }
 
-inline bool is_curve_possibly_in_box(const Curve& curve, int x_min, int y_min, int x_max, int y_max) {
+bool is_curve_possibly_in_box(const Curve& curve, int x_min, int y_min, int x_max, int y_max) {
     for (const auto& p : { curve.p1, curve.p2, curve.p3 }) {
 	if (x_min <= p.x && y_min <= p.y && p.x < x_max && p.y < y_max) {
 	    return true;
@@ -308,14 +309,17 @@ void FontInfo::generate_font_buffers() {
 	}	
     }
 }
-	 
+
 void FontInfo::print_font_buffers() {
     int i = 1;
-    if (static_cast<int>(glyph_infos.size()) > i) {
-	glyph_infos[i].render_box.print();
+    if (static_cast<int>(glyph_infos.size()) <= i) {
+	return;
     }
-
+    
     fmt::print("\nglyph {}\n", glyph_infos[i].glyph);
+
+    glyph_infos[i].render_box.print();
+    
     int offset = offset_buffer[i];
     int size = size_buffer[i];
 

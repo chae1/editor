@@ -25,20 +25,22 @@
 	  (char! *space*))
   (get-space-advance))
 
-;; get-current-line
-(objlet* ((text! *text*))
-  (get-current-line))
-
 ;; insert-line
 (objlet* ((text! *text*))
   (insert-line-in-text (create-line!)))
 
 (objlet* ((text! *text*)
-	  (line! (get-current-line)))
+	  (line! (my-tree:get-data text-iter-cursor)))
   (insert-char-in-line *a*))
 
 (objlet* ((user! *user*))
   (setf text (create-text!)))
+
+(objlet* ((user! *user*)
+	  (text! text))
+  (add-primary-cursor 1 0))
+
+
 
 ;; load-text
 (objlet* ((user! *user*)
@@ -79,4 +81,3 @@
 
 (objlet* ((user! *user*))
   (get-render-msg))
-
