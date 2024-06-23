@@ -1,3 +1,5 @@
+new version working on v2 branch
+
 # editor
 A GPU rendering client program and a server program for shared text editing.\
 <img src="https://github.com/chae1/editor/assets/29856486/381a0c16-9729-460f-9a82-04df2de4760d" width="300">
@@ -8,8 +10,6 @@ vulkan\
 cmake
 
 ## How to build
-
-
 ### Ubuntu
 run client
 ```console
