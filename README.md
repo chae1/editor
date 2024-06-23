@@ -8,21 +8,15 @@ vulkan\
 cmake
 
 ## How to build
-### Ubuntu
-run client
-```console
-sudo apt update
-sudo apt-get install libglfw3-dev
-sudo apt-get install libvulkan-dev
-sudo apt-get install libfmt-dev
-./client ip:port username
-```
-
-## How to develop
-### Ubuntu
 build client
 ```console
-sudo apt install libglm-dev
+
+```
+
+## How to run
+build client
+```console
+./client ip:port username
 ```
 
 ## Details
