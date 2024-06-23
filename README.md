@@ -1,6 +1,6 @@
 # editor
 A GPU rendering client program and a server program for shared text editing.\
-<img src="https://github.com/chae1/editor/assets/29856486/381a0c16-9729-460f-9a82-04df2de4760d" width="300">
+<img src="https://github.com/chae1/editor/assets/29856486/381a0c16-9729-460f-9a82-04df2de4760d" width="350">
 
 ## Prerequisite
 c++ 20\
@@ -8,15 +8,25 @@ vulkan\
 cmake
 
 ## How to build
-build client
+### Ubuntu
+build client\
+move to client directory
 ```console
-
+mkdir build
+cd ./build
+cmake .. -j $(nproc)
+cmake --build . -j $(nproc)
 ```
-
+build server
+```console
+```
 ## How to run
-build client
+run client
 ```console
 ./client ip:port username
+```
+run server
+```console
 ```
 
 ## Details
