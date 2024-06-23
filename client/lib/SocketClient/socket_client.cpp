@@ -74,7 +74,7 @@ void Socket_client::send_msg(const char *msg) {
         throw std::runtime_error("send failed");
     }
     
-    std::cout << "write msg : " << msg << std::endl;
+    // std::cout << "write msg : " << msg << std::endl;
 }
 
 void Socket_client::send_msg(const std::string& msg) {
@@ -91,7 +91,7 @@ void Socket_client::send_msg(const std::string& msg) {
         throw std::runtime_error("send failed");
     }
     
-    std::cout << "write msg : " << msg << std::endl;
+    // std::cout << "write msg : " << msg << std::endl;
 }
 
 void Socket_client::read_msg() {
@@ -152,5 +152,5 @@ void Socket_client::read_msg() {
     }
 
     // fmt::print("begin {} end {}\n", temp_buf_unread_begin, temp_buf_unread_end);
-    std::cout << "read msg : " << buf << "\n";
+    // std::cout << "read msg : " << buf << "\n";
 }

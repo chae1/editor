@@ -51,8 +51,9 @@ void FontInfo::load_font(string str) {
 	    line >> currline_token;
 
 	    if (currline_token == "glyph") {
-		line = get_newline(fin);	    
-		line >> glyph_info.glyph;
+		line = get_newline(fin);
+		glyph_info.glyph = line.str()[0];
+		// fmt::print("{} {}\n", entry.path().c_str(), glyph_info.glyph);
 	    
 	    } else if (currline_token == "curves") {
 		line = get_newline(fin);	    

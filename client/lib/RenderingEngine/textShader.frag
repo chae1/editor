@@ -1,9 +1,10 @@
 #version 450
 #extension GL_EXT_debug_printf : enable
 
-layout(location = 0) in vec4 fragColor;
-layout(location = 1) in vec2 fragTexCoord;
-layout(location = 2) in flat int fragCharId;
+layout(location = 0) in vec4 charColor;
+layout(location = 1) in vec4 charBackgroundColor;
+layout(location = 2) in vec2 fragTexCoord;
+layout(location = 3) in flat int fragCharId;
 
 struct Curve {
     vec2 p1;
@@ -148,15 +149,15 @@ void main() {
     coverage += get_coverage_up();    
     coverage = sqrt(clamp(abs(coverage) / 2, 0.0, 1.0));
 
-    outColor = vec4((vec3(1.0) * (1.0 - coverage) + fragColor.rgb * coverage) , fragColor.a);
+    outColor = vec4((charBackgroundColor.rgb * (1.0 - coverage) + charColor.rgb * coverage) , charColor.a);
 
-    // outColor = fragColor;  
+    // outColor = charColor;  
     
     // if (coverage == 0.0)
     // 	debugPrintfEXT("fragTexcoord %1.2v2f\n outColor %1.2v4f\n coverage %f\n", fragTexCoord, outColor, coverage);
     
     // if (0.1 < fragTexCoord.x && fragTexCoord.x < 0.15 && 0.1 < fragTexCoord.y && fragTexCoord.y < 0.15)
-    // 	debugPrintfEXT("fragTexcoord %1.2v2f\n fragColor %1.2v4f\n coverage %f\n", fragTexCoord, fragColor, coverage);
+    // 	debugPrintfEXT("fragTexcoord %1.2v2f\n charColor %1.2v4f\n coverage %f\n", fragTexCoord, charColor, coverage);
     
     // debugPrintfEXT("fwidth %1.2v2f\n", fwidth(fragTexCoord));    
     // debugPrintfEXT("fragTexcoord %1.2v2f\n", fragTexCoord);

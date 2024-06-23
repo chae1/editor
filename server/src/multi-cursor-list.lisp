@@ -162,12 +162,12 @@
  
 (export 'move-cursor-to-index)
 (defobjfun move-cursor-to-index (multi-cursor-list! cursor! index)
-  (if (and (>= index 0) (<= index size))
-      (let ((diff (- index curr-index)))
-        (if (>= diff 0)
-            (repeat diff (move-cursor-to-next multi-cursor-list! cursor!))
-            (repeat (- diff) (move-cursor-to-prev multi-cursor-list! cursor!))))
-      (error "index out of bound"))
+  (let ((new-index (cond ((< index 0) 0)
+                         ((> index size) size)
+                         (t index))))
+    (move-cursor-to-head multi-cursor-list! cursor!)
+    (repeat new-index
+      (move-cursor-to-next multi-cursor-list! cursor!)))
   cursor!)
 
 (export 'split-list-after-cursor)

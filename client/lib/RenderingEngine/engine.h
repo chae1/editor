@@ -81,6 +81,7 @@ namespace vk_engine {
 	alignas(16) glm::mat4 view;
 	alignas(16) glm::mat4 proj;
 	alignas(16) glm::vec4 color;
+	alignas(16) glm::vec4 background_color;
 	alignas(16) int charId;
     };
     

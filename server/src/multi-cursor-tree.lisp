@@ -482,7 +482,7 @@
     (when (>= prev-index 0)
       (setf curr-node (get-node-by-index t prev-index))
       (setf curr-index prev-index)))
-  t)
+  cursor!)
 
 (export 'move-cursor-to-next)
 (defobjfun move-cursor-to-next (t-multi-cursor-tree! cursor!)
@@ -490,19 +490,19 @@
     (when (<= next-index t-size)
       (setf curr-node (get-node-by-index t next-index))
       (setf curr-index next-index)))
-  t)
+  cursor!)
 
 (export 'move-cursor-to-head)
 (defobjfun move-cursor-to-head (t-multi-cursor-tree! cursor!)
   (setf curr-node t-head)
   (setf curr-index 0)
-  t)
+  cursor!)
 
 (export 'move-cursor-to-last)
 (defobjfun move-cursor-to-last (t-multi-cursor-tree! cursor!)
   (setf curr-node (get-node-by-index t t-size))
   (setf curr-index t-size)
-  t)
+  cursor!)
 
 (export 'move-cursor-to-index)
 (defobjfun move-cursor-to-index (tree-multi-cursor-tree! cursor! index)
@@ -511,7 +511,7 @@
                          (t index))))
     (setf curr-node (get-node-by-index tree new-index))
     (setf curr-index new-index))
-  tree)
+  cursor!)
 
 (export 'get-data)
 (defobjmacro get-data (cursor!)

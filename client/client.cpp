@@ -64,6 +64,7 @@ std::string get_token(std::stringstream& ss) {
 }
 
 bool draw_flag = false;
+// vector<CharacterObject> cursorObjects;
 
 void parse_msg_and_run_command() {
     std::stringstream ss(client.buf);
@@ -73,14 +74,17 @@ void parse_msg_and_run_command() {
 	token = get_token(ss);
 
 	if (token == "begin") {
+	    // cursorObjects.clear();
 	    engine.textStorageBufferMutex.lock();
-	    engine.characterObjects.clear();	    
+	    engine.characterObjects.clear();
 	    draw_flag = true;
 	    
 	} else if (token == "end") {
 	    engine.textStorageBufferUpdateFlag = true;
 	    engine.textStorageBufferMutex.unlock();
 	    draw_flag = false;
+	    
+	    // engine.characterObjects.insert(engine.characterObjects.end(), cursorObjects.begin(), cursorObjects.end());
 
 	    int char_num = engine.characterObjects.size();
 	    fmt::print("char_num: {}\nmaxCharacterCount: {}\n", char_num, engine.maxCharacterCount);
@@ -98,25 +102,55 @@ void parse_msg_and_run_command() {
 		float char_x, char_y, char_width, char_height;
 		ss >> c >> char_x >> char_y >> char_width >> char_height;
 
-		fmt::print("char {}, {}, {}, {}, {}\n", c, char_x, char_y, char_width, char_height);
+		// fmt::print("char {}, {}, {}, {}, {}\n", c, char_x, char_y, char_width, char_height);
 
-		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
-		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(1.0f, -1.0f, 0.0f), 1))));
-		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(1.0f, 1.0f, 0.0f), 1))));
-		fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, 1.0f, 0.0f), 1))));
+		// fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, -1.0f, 0.0f), 1))));
+		// fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(1.0f, -1.0f, 0.0f), 1))));
+		// fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(1.0f, 1.0f, 0.0f), 1))));
+		// fmt::print("{}\n", to_string(vec3(translate(mat4(1.0f), vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * scale(mat4(1.0f), vec3(char_width/2.0f, char_height/2.0f, 1.0f)) * vec4(vec3(-1.0f, 1.0f, 0.0f), 1))));
 		
 		CharacterObject ssbo;
 		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(char_width/2.0f, char_height/2.0f, 1.0f));
 		ssbo.view = glm::mat4(1.0f);
 		ssbo.proj = glm::mat4(1.0f);
 		ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		ssbo.background_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		ssbo.charId = engine.fontInfo.glyph_map[c];
 
 		engine.characterObjects.push_back(ssbo);
 		
 		// fmt::print("{}\n", ssbo.charId);		
-	    } else if (token == "cursor") {
+	    } else if (token == "space") {
+		char c = ' ';
+		float char_x, char_y, char_width, char_height;
+		ss >> char_x >> char_y >> char_width >> char_height;
 		
+		CharacterObject ssbo;
+		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(char_x + char_width/2.0f, char_y - char_height/2.0f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(char_width/2.0f, char_height/2.0f, 1.0f));
+		ssbo.view = glm::mat4(1.0f);
+		ssbo.proj = glm::mat4(1.0f);
+		ssbo.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		ssbo.background_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		ssbo.charId = engine.fontInfo.glyph_map[c];
+
+		engine.characterObjects.push_back(ssbo);
+		
+	    } else if (token == "cursor") {
+		string username;
+		char c = ' ';
+		float x, y, width, height, r, g, b;
+		
+		ss >> username >> x >> y >> width >> height >> r >> g >> b;
+				
+		CharacterObject ssbo;
+		ssbo.model = glm::translate(glm::mat4(1.0f), glm::vec3(x + width/2.0f, y - height/2.0f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(width/2.0f, height/2.0f, 1.0f));
+		ssbo.view = glm::mat4(1.0f);
+		ssbo.proj = glm::mat4(1.0f);
+		ssbo.background_color = glm::vec4(r, g, b, 1.0f);
+		ssbo.charId = engine.fontInfo.glyph_map[c];
+
+		// cursorObjects.push_back(ssbo);
+		engine.characterObjects.push_back(ssbo);
 	    }
 	} else {}
     }

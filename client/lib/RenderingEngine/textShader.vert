@@ -15,15 +15,17 @@ struct StorageBufferObject {
     mat4 view;
     mat4 proj;
     vec4 color;
+    vec4 background_color;
     int charId;
 };
 
 layout(binding = 1) buffer StorageBuffer { StorageBufferObject ssbos[]; };
 // layout(binding = 14) buffer offsetBuffer { int Offsets[]; };
 
-layout(location = 0) out vec4 fragColor;
-layout(location = 1) out vec2 fragTexCoord;
-layout(location = 2) out int fragCharId;
+layout(location = 0) out vec4 charColor;
+layout(location = 1) out vec4 charBackgroundColor;
+layout(location = 2) out vec2 fragTexCoord;
+layout(location = 3) out int fragCharId;
 
 void main() {
     StorageBufferObject ssbo = ssbos[gl_InstanceIndex];
@@ -32,7 +34,8 @@ void main() {
     gl_Position = ssbo.model * inPos;
     // gl_Position = inPos;
 
-    fragColor = ssbo.color;
+    charColor = ssbo.color;
+    charBackgroundColor = ssbo.background_color;
     fragTexCoord = inTexCoord;
     fragCharId = ssbo.charId;
     

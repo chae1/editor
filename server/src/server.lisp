@@ -108,6 +108,24 @@
 (map-alist-to-table *extend-state-char-alist* *extend-state-insert-key-table*)
 (map-alist-to-table *extend-state-other-insert-key-alist* *extend-state-insert-key-table*)
 
+(defmacro run-thread (&body body)
+  `(sb-thread:make-thread
+    (lambda ()
+      ,@body)))
+
+(defobj key-combi!
+  (shift nil :type boolean)
+  (control nil :type boolean)
+  (alt nil :type boolean)
+  (capslock nil :type boolean)
+  (key nil :type (or null integer)))
+
+(defparameter *curr-key-combi* (make-array 0 :fill-pointer t :adjustable t))
+(defparameter *curr-key-combi-fn-table* (make-hash-table :test #'equalp))
+
+
+
+
 (with-objs (user!)
   (set-msg-handle "key-event" (key action)    
     ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
@@ -155,7 +173,7 @@
 	       (1 (move-cursors-left))))
 
 	;; up
-	(263 (case action
+	(265 (case action
 	       (1 (move-cursors-up))))
 
 	;; down
@@ -164,16 +182,29 @@
 
 	;; otherwise insert character in text
 	(otherwise (case action
-		     (1 (progn
-			  (case state
-			    ('normal (if-let ((char (gethash key *normal-state-insert-key-table*)))
-				       (progn
-					 (format t "insert char ~a~%" char)
-					 (insert-char-after-cursors char))))
-			    ('extend (if-let ((char (gethash key *extend-state-insert-key-table*)))
-				       (progn
-					 (format t "insert char ~a~%" char)
-					 (insert-char-after-cursors char))))))))))
+		     (1 (case state
+			  ('normal (if-let ((char (gethash key *normal-state-insert-key-table*)))
+				     (flet ((insert-char ()
+					      (format t "insert char ~a~%" char)
+					      (insert-char-after-cursors char)))
+				       (insert-char)
+				       ;; (sb-thread:make-thread
+				       ;; 	(objlambda (user!)
+				       ;; 	  (handler-case
+				       ;; 	      (progn
+				       ;; 		(insert-char)
+				       ;; 		(sleep 0.5))
+				       ;; 	    (insert-char-stop (o)))
+				       ;; 	  )
+					
+				       ;; 	:arguments user!)
+				       )))
+			  
+			  ('extend (if-let ((char (gethash key *extend-state-insert-key-table*)))
+				     (progn
+				       (format t "insert char ~a~%" char)
+				       (insert-char-after-cursors char)))))
+		      ))))
 
       ;; send render message
       (case action
@@ -229,48 +260,48 @@
 (defparameter *socket* nil)
 (defparameter *text* nil)
 
-(defmacro run-thread (&body body)
-  `(sb-thread:make-thread
-    (lambda ()
-      ,@body)))
-
 (defun run-server (&key (ip #(127 0 0 1)) (port 20741))
-  (setf *close-server-flag* nil)
+  (unwind-protect
+       (handler-case
+	   (progn
+	     (setf *socket* (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
+	     (setf (sb-bsd-sockets:non-blocking-mode *socket*) nil)
+	     (setf (sb-bsd-sockets:sockopt-reuse-address *socket*) t)
+
+	     (sb-bsd-sockets:socket-bind *socket* ip port)
+	     (sb-bsd-sockets:socket-listen *socket* 1)
+	     
+	     (format t "(run-server) start listening to ~a~%" *socket*)
+
+	     (setf *text* (create-text!))
+	     
+	     ;; wait for new connect
+	     (objlet* ((text! *text*))
+	       (loop
+		 (if-let ((connect (sb-bsd-sockets:socket-accept *socket*)))
+		   (let ((socket-stream-in (sb-bsd-sockets:socket-make-stream connect :input t)))
+		     (format t "new connect~%")
+		     (handle-connect connect socket-stream-in))))))
+	 (sb-bsd-sockets:bad-file-descriptor-error (o)
+	   (format t "(run-server) ~a~%" o)
+	   )
+	 (sb-bsd-sockets:address-in-use-error (o)
+	   (format t "(run-server) ~a~%" o)
+	   ))
+    (progn
+      (format t "(run-server) closing socket~%")
+      (sb-bsd-sockets:socket-close *socket*)
+      (format t "(run-server) exiting server thread~%")
+      ))
+
   (run-thread
-    (unwind-protect
-	 (handler-case
-	     (progn
-	       (setf *socket* (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
-	       (setf (sb-bsd-sockets:non-blocking-mode *socket*) nil)
-	       (setf (sb-bsd-sockets:sockopt-reuse-address *socket*) t)
+    ))
 
-	       (sb-bsd-sockets:socket-bind *socket* ip port)
-	       (sb-bsd-sockets:socket-listen *socket* 1)
-	       
-	       (format t "(run-server) start listening to ~a~%" *socket*)
-
-	       (setf *text* (create-text!))
-	       
-	       ;; wait for new connect
-	       (objlet* ((text! *text*))
-		 (loop
-		   (if-let ((connect (sb-bsd-sockets:socket-accept *socket*)))
-		     (let ((socket-stream-in (sb-bsd-sockets:socket-make-stream connect :input t)))
-		       (format t "new connect~%")
-		       (handle-connect connect socket-stream-in))))))
-	   (sb-bsd-sockets:bad-file-descriptor-error (o)
-	     (format t "(run-server) ~a~%" o)
-	     )
-	   (sb-bsd-sockets:address-in-use-error (o)
-	     (format t "(run-server) ~a~%" o)
-	     ))
-      (progn
-	(format t "(run-server) closing socket~%")
-	(sb-bsd-sockets:socket-close *socket*)
-	(format t "(run-server) exiting server thread~%")
-	))))
+(defun close-socket ()
+  (format t "(close-socket) closing socket~%")
+  (sb-bsd-sockets:socket-close *socket*))
 
 (defun print-all-users ()
   (objlet* ((text! *text*))
-    (objdolist ((user! user-list))
-      (format t "~a~%" user-name))))
+    (objdolist (user! user-list)
+      (format t "~a~%" username))))
