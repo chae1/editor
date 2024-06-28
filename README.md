@@ -3,7 +3,9 @@ A GPU rendering text editor client and a server for simultaneous text editing.\
 <img src="https://github.com/chae1/editor/assets/29856486/381a0c16-9729-460f-9a82-04df2de4760d" width="350">
 
 ## Prerequisite
-Install vulkan sdk on your platform following docs in https://vulkan.lunarg.com/sdk/home.
+1. Install vulkan sdk https://vulkan.lunarg.com/sdk/home.
+2. Install sbcl https://www.sbcl.org/platform-table.html.
+3. Install quicklisp https://www.quicklisp.org/beta/.
 
 ## Windows
 ### Client
@@ -27,13 +29,11 @@ cmake --build . -j %NUMBER_OF_PROCESSORS%
 server.exe 127.0.0.1:20741
 ```
 #### How to build
-1. Install sbcl https://www.sbcl.org/platform-table.html.
-2. Install quicklisp https://www.quicklisp.org/beta/.
-3. Move to server directory in console.
+1. Move to server directory in console.
 ```console
 sbcl --load load.lisp
 ```
-4. server.exe will be built in server directory.
+2. server.exe will be built in server directory.
 ## Ubuntu
 ### Client
 #### How to build
