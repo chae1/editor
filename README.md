@@ -20,7 +20,7 @@ cd ./build
 cmake .. -G "MinGW Makefiles"
 cmake --build . -j %NUMBER_OF_PROCESSORS%
 ```
-3. client.exe should have been built in build directory.
+3. client.exe will be built in build directory.
 ### Server
 #### How to run
 ```
@@ -33,7 +33,7 @@ server.exe 127.0.0.1:20741
 ```console
 sbcl --load load.lisp
 ```
-4. server.exe should have been built in server directory.
+4. server.exe will be built in server directory.
 ## Ubuntu
 ### Client
 #### How to build
