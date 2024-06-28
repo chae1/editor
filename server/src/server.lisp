@@ -260,6 +260,7 @@
 (defparameter *socket* nil)
 (defparameter *text* nil)
 
+(export 'run-server)
 (defun run-server (&key (ip #(127 0 0 1)) (port 20741))
   (unwind-protect
        (handler-case
@@ -292,10 +293,7 @@
       (format t "(run-server) closing socket~%")
       (sb-bsd-sockets:socket-close *socket*)
       (format t "(run-server) exiting server thread~%")
-      ))
-
-  (run-thread
-    ))
+      )))
 
 (defun close-socket ()
   (format t "(close-socket) closing socket~%")

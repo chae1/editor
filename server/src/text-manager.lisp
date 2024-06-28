@@ -270,8 +270,6 @@ cursor-list of user!
   (osstream (make-string-output-stream) :type sb-impl::string-output-stream)
   (text nil :type (or null text!))
 
-  ()
-  
   ;; char variables
   (curr-font (get-default-font) :type font!)
   ;; normalized scale to pixel scale
