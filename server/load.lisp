@@ -46,4 +46,6 @@
 
 (cond
   ((string-equal (software-type) "Win32")
-   (sb-ext:save-lisp-and-die "server.exe" :executable t :toplevel #'export::main)))
+   (sb-ext:save-lisp-and-die "server.exe" :executable t :toplevel #'export::main))
+  ((string-equal (software-type) "Linux")
+   (sb-ext:save-lisp-and-die "server" :executable t :toplevel #'export::main)))
