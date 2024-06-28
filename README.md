@@ -31,36 +31,32 @@ server.exe 127.0.0.1:20741
 ### Windows
 #### Client
 1. Install ucrt mingw toolchain in msys2 following https://code.visualstudio.com/docs/cpp/config-mingw.
-2. Move to client directory in console.
+2. Move to client/build/ in console.
 ```console
-mkdir build
-cd ./build
 cmake .. -G "MinGW Makefiles"
 cmake --build . -j %NUMBER_OF_PROCESSORS%
 ```
-3. client.exe will be built in build directory.
+3. client.exe will be built in client/build/.
 #### Server
-1. Move to server directory in console.
+1. Move to server/ in console.
 ```console
 sbcl --load load.lisp
 ```
-2. server.exe will be built in server directory.
+2. server.exe will be built in server/.
 ### Ubuntu
 #### Client
-1. move to client directory in console.
+1. move to client/build/ in console.
 ```console
-mkdir build
-cd ./build
 cmake .. -G "Unix Makefiles"
 cmake --build . -j $(nproc)
 ```
-2. client.exe will be built in build directory.
+2. client.exe will be built in client/build/.
 #### Server
-1. Move to server directory in console.
+1. Move to server/ in console.
 ```console
 sbcl --load load.lisp
 ```
-2. server.exe will be built in server directory.
+2. server.exe will be built in server/.
 
 ## Details
 * GPU text rendering is implemented using the method shown in "Eric Lengyel, GPU-Centered Font Rendering Directly from Glyph Outlines, Journal of Computer Graphics Techniques (JCGT), vol. 6, no. 2, 31-47, 2017".
