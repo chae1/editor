@@ -56,7 +56,7 @@ void recreateSwapChainCallback() {
     client.send_msg(to_string(height));
 }
 
-std::string get_token(std::stringstream& ss) {
+std::string get_token(std::istringstream& ss) {
     std::string token;
     ss >> token;
 
@@ -67,7 +67,7 @@ bool draw_flag = false;
 // vector<CharacterObject> cursorObjects;
 
 void parse_msg_and_run_command() {
-    std::stringstream ss(client.buf);
+    std::istringstream ss(client.buf);
     std::string token = get_token(ss);
     
     if (token == "draw") {

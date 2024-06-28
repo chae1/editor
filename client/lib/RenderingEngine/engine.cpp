@@ -17,8 +17,8 @@ namespace fs = std::filesystem;
 
 void Engine::init_font() {
     fs::path ubuntu_mono_r_path { fs::current_path() / "../../font/txt/UbuntuMono-R/" };
-    fmt::print("loading font {}\n", string(ubuntu_mono_r_path));
-    fontInfo.load_font(ubuntu_mono_r_path);
+    fmt::print("loading font {}\n", ubuntu_mono_r_path.string());
+    fontInfo.load_font(ubuntu_mono_r_path.string());
     fontInfo.generate_font_buffers();
     fontInfo.print_font_buffers();
     fontInfo.generate_glyph_map();

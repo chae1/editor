@@ -4,9 +4,20 @@
 #include <cstring>
 #include <iostream>
 
-#include <errno.h>
-#include <netdb.h>
+// #include <sys/types.h>
+
+#if defined(WINDOWS)
+#include <windows.h>
+#include <winerror.h>
+
+#elif defined(LINUX)
+#include <arpa/inet.h>
 #include <unistd.h>
+#include <errno.h>
+
+#else
+#endif
+
 #include <fcntl.h>
 
 #include <fmt/format.h>
@@ -24,6 +35,15 @@ void Socket_client::init(const std::string& ip_port) {
         throw std::runtime_error("run program as ./client xxx.xxx.xxx.xxx:20741");
     }
 
+#if defined(WINDOWS)
+    WSADATA wsaData;
+    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (result != 0) {
+        std::cerr << "WSAStartup failed with error: " << result << std::endl;
+        throw std::runtime_error("WSAStartup failed");
+    }
+#endif
+    
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_family = AF_INET;
@@ -35,6 +55,20 @@ void Socket_client::init(const std::string& ip_port) {
 
     bool connect_succeed = false;
     for (rp = res; rp != NULL; rp = rp->ai_next) {
+
+#if defined(WINDOWS)
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock == INVALID_SOCKET)
+            continue;
+
+	if (connect(sock, rp->ai_addr, rp->ai_addrlen) != -1) {
+            connect_succeed = true;
+            break;
+        }
+
+	closesocket(sock);
+	
+#elif defined(LINUX)
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (socket_fd == -1)
 	    continue;
@@ -44,7 +78,9 @@ void Socket_client::init(const std::string& ip_port) {
 	    break; 
 	}
 
-	close (socket_fd);
+	close(socket_fd);
+#endif
+      
     }
     
     freeaddrinfo(res);
@@ -58,17 +94,30 @@ Socket_client::Socket_client(const std::string& ip_port) {
 }
 
 Socket_client::~Socket_client() {
+#if defined(WINDOWS)
+    closesocket(sock);
+#elif defined(LINUX)
     close(socket_fd);
+#endif
 }
 
 void Socket_client::send_msg(const char *msg) {
+#if defined(WINDOWS)
+    int ret = send(sock, msg, strlen(msg), 0);
+#elif defined(LINUX)
     int ret = send(socket_fd, msg, strlen(msg), 0);
+#endif
     if (ret == -1) {
         std::cout << "errno = " << errno << "\n";
         throw std::runtime_error("send failed");
     }
-
+    
+#if defined(WINDOWS)
+    ret = send(sock, "\n", strlen("\n"), 0);
+#elif defined(LINUX)
     ret = send(socket_fd, "\n", strlen("\n"), 0);
+#endif
+
     if (ret == -1) {
         std::cout << "errno = " << errno << "\n";
         throw std::runtime_error("send failed");
@@ -79,13 +128,21 @@ void Socket_client::send_msg(const char *msg) {
 
 void Socket_client::send_msg(const std::string& msg) {
     const char* msg_buf = msg.c_str();
+#if defined(WINDOWS)
+    int ret = send(sock, msg_buf, strlen(msg_buf), 0);
+#elif defined(LINUX)
     int ret = send(socket_fd, msg_buf, strlen(msg_buf), 0);
+#endif
     if (ret == -1) {
         std::cout << "errno = " << errno << "\n";
         throw std::runtime_error("send failed");
     }
 
+#if defined(WINDOWS)
+    ret = send(sock, "\n", strlen("\n"), 0);
+#elif defined(LINUX)
     ret = send(socket_fd, "\n", strlen("\n"), 0);
+#endif
     if (ret == -1) {
         std::cout << "errno = " << errno << "\n";
         throw std::runtime_error("send failed");
@@ -104,7 +161,12 @@ void Socket_client::read_msg() {
 	// recv from socket if all characters in temp_buf are read already
 	if (temp_buf_unread_begin == temp_buf_unread_end) {
 	    memset(temp_buf, 0, sizeof(temp_buf));
+#if defined(WINDOWS)
+	    int ret = recv(sock, temp_buf, sizeof(temp_buf), 0);
+#elif defined(LINUX)
 	    int ret = recv(socket_fd, temp_buf, sizeof(temp_buf), 0);
+#endif
+	    
 	    // std::cout << "recv msg : " << temp_buf << "\n";
 	    if (ret == -1) {
 		std::cout << "errno = " << errno << "\n";

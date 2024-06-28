@@ -15,6 +15,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall")
 
+if(CMAKE_SYSTEM MATCHES Windows)
+  message(STATUS "Target system is Windows")
+  add_compile_definitions(WINDOWS)
+endif()
+
+if(CMAKE_HOST_SYSTEM MATCHES Linux)
+  message(STATUS "Build host runs Linux")
+  add_compile_definitions(LINUX)
+endif()
+
 # external libraries
 include(FetchContent)
 FetchContent_Declare(

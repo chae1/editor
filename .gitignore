@@ -1,0 +1,7 @@
+.clangd
+.clangd~
+.vscode/
+client/.cache/
+client/build/
+font/load.fasl
+.gitignore~

@@ -2,6 +2,6 @@ font
 UbuntuMono-R
 
 generated from ttf-path
-/home/chaewon/Desktop/chae1/editor/server/../font/ttf/UbuntuMono-R.ttf
+c:/Users/kcwch/Desktop/chae1/editor/font/../font/ttf/UbuntuMono-R.ttf
 
 font-info-end

@@ -1,11 +1,23 @@
 #pragma once
 
-#include <string>
+#if defined(WINDOWS)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+// #pragma comment(lib, "ws2_32.lib")
+#define _WINNT_WIN32 0x0601
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#elif defined(LINUX)
+
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <netdb.h>
-#include <arpa/inet.h>
+
+#endif
+
+#include <string>
 
 namespace socket_client {
     constexpr size_t bufsize = 256;
@@ -25,10 +37,14 @@ namespace socket_client {
 	
 	void read_msg();
 	bool recv_msg();
-		
-    private:
-	int socket_fd;
 
+      private:	
+#if defined(WINDOWS)
+	SOCKET sock;
+#elif defined(LINUX)
+	int socket_fd;
+#endif
+	
 	char temp_buf[bufsize];
 	size_t temp_buf_unread_begin { 0 };
 	size_t temp_buf_unread_end { 0 };

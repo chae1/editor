@@ -21,7 +21,7 @@ void RenderBox::print() const {
     cout << fmt::format("render box: x_min, y_min, x_max, y_max : {}, {}, {}, {}\n", x_min, y_min, x_max, y_max);
 }
 
-bool GlyphInfo::operator<(const GlyphInfo& glyph_info) {
+bool GlyphInfo::operator<(const GlyphInfo& glyph_info) const {
     return glyph < glyph_info.glyph;
 }
 

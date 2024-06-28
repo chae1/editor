@@ -44,7 +44,7 @@ namespace font {
 	vector<Curve> curves;
 	
 	void generate_normalized_split_curves(int split_size);
-	bool operator< (const GlyphInfo&);
+	bool operator< (const GlyphInfo&) const;
 
 	vector<vector<Curve>> split_left_curves;
 	vector<vector<Curve>> split_right_curves;

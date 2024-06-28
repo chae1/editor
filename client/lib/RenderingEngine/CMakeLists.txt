@@ -7,7 +7,7 @@ find_package(Vulkan REQUIRED)
 
 # link personal libraries
 target_link_libraries(engine PUBLIC fontInfo socketClient window fmt glfw)
-target_link_libraries(engine PRIVATE Vulkan::Vulkan)
+target_link_libraries(engine PUBLIC Vulkan::Vulkan)
 
 message("${CMAKE_CURRENT_BINARY_DIR}")
 

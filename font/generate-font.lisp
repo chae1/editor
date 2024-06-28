@@ -43,7 +43,7 @@
 
 (defparameter *small-char-str-pairs* (mapcar #'(lambda (c) (cons c (char-to-str c))) *small-chars*))
 
-(defparameter *big-char-str-pairs* (mapcar #'(lambda (c) (cons c (char-to-str c))) *big-chars*))
+(defparameter *big-char-str-pairs* (mapcar #'(lambda (c) (cons c (concatenate 'string "big_" (char-to-str c)))) *big-chars*))
 
 (defparameter *other-char-str-pairs* '((#\` . "backquote") (#\~ . "tilde") (#\! . "exclamation_mark") (#\@ . "ampersat") (#\# . "sharp") (#\$ . "dollar") (#\% . "percent") (#\^ . "caret") (#\& . "ampersand") (#\* . "asterisk") (#\( . "open_parenthesis") (#\) . "close_parenthesis") (#\- . "hyphen") (#\_ . "underscore") (#\+ . "plus") (#\= . "equal") (#\{ . "open_brace") (#\} . "close_brace") (#\[ . "open_bracket") (#\] . "close_bracket") (#\| . "pipe") (#\\ . "backslash") (#\; . "semicolon") (#\: . "colon") (#\' . "single_quote") (#\" . "quote") (#\, . "comma") (#\. . "period") (#\< . "less_than") (#\> . "greater_than") (#\? . "question_mark") (#\/ . "slash") (#\  . "space") (#\0 . "zero") (#\1 . "one") (#\2 . "two") (#\3 . "three") (#\4 . "four") (#\5 . "five") (#\6 . "six") (#\7 . "seven") (#\8 . "eight") (#\9 . "nine")))
 
@@ -249,3 +249,5 @@
 
 (defun generate-ubuntumono-r ()
   (generate-font-info *ubuntumono-r*))
+
+;; (generate-ubuntumono-r)
