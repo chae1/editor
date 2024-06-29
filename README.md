@@ -7,21 +7,20 @@ A GPU rendering text editor client and a server for simultaneous text editing.\
 Following commands are for cmd. Use equivalent commands if you use other shells.
 #### Client
 ```
-client.exe 127.0.0.1:20741 YourName
+client.exe 127.0.0.1:100 YourName
 ```
 #### Server
-
 ```
-server.exe 127.0.0.1:20741
+server.exe 127.0.0.1:100
 ```
 ### Ubuntu
 #### Client
 ```
-./client 127.0.0.1:20741 YourName
+./client 127.0.0.1:100 YourName
 ```
 #### Server
 ```
-./server 127.0.0.1:20741
+./server 127.0.0.1:100
 ```
 
 ## How to build
