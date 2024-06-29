@@ -4,11 +4,13 @@ A GPU rendering text editor client and a server for simultaneous text editing.\
 
 ## How to run
 ### Windows
+Following commands are for cmd. Use equivalent commands if you use other shells.
 #### Client
 ```
 client.exe 127.0.0.1:20741 YourName
 ```
 #### Server
+
 ```
 server.exe 127.0.0.1:20741
 ```
@@ -29,9 +31,10 @@ server.exe 127.0.0.1:20741
 3. Install quicklisp https://www.quicklisp.org/beta/.
 
 ### Windows
+Following commands are for cmd. Use equivalent commands if you use other shells.
 #### Client
 1. Install ucrt mingw toolchain in msys2 following https://code.visualstudio.com/docs/cpp/config-mingw.
-2. Move to client/build/ in console.
+2. Move to client/build/ in cmd.
 ```console
 cmake .. -G "MinGW Makefiles"
 cmake --build . -j %NUMBER_OF_PROCESSORS%
@@ -45,14 +48,14 @@ sbcl --load load.lisp
 2. server.exe will be built in server/.
 ### Ubuntu
 #### Client
-1. move to client/build/ in console.
+1. move to client/build/ in terminal.
 ```console
 cmake .. -G "Unix Makefiles"
 cmake --build . -j $(nproc)
 ```
 2. client.exe will be built in client/build/.
 #### Server
-1. Move to server/ in console.
+1. Move to server/ in terminal.
 ```console
 sbcl --load load.lisp
 ```
