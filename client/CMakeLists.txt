@@ -60,3 +60,11 @@ if(CMAKE_SYSTEM MATCHES Windows)
   target_link_options(client PRIVATE -static -static-libgcc -static-libstdc++)
   add_compile_definitions(WINDOWS)
 endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_definitions(-DDEBUG)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  add_definitions(-DNDEBUG)
+endif()
