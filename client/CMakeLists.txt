@@ -55,3 +55,8 @@ add_subdirectory(lib/RenderingEngine)
 
 add_executable(client client.cpp)
 target_link_libraries(client PRIVATE engine socketClient)
+
+if(CMAKE_SYSTEM MATCHES Windows)
+  target_compile_options(client PRIVATE -static-libstdc++)
+  add_compile_definitions(WINDOWS)
+endif()
