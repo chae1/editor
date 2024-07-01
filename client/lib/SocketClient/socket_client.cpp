@@ -7,6 +7,8 @@
 // #include <sys/types.h>
 
 #if defined(WINDOWS)
+#define _WINNT_WIN32 0x0601
+#define NOMINMAX
 #include <windows.h>
 #include <winerror.h>
 

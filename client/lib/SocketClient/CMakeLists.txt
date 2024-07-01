@@ -6,8 +6,9 @@ target_link_libraries(socketClient PUBLIC fmt)
 
 if(CMAKE_SYSTEM MATCHES Windows)
   target_link_libraries(socketClient PRIVATE wsock32 ws2_32)
+  target_compile_definitions(socketClient PUBLIC WINDOWS)
 endif()
 
-if(CMAKE_HOST_SYSTEM MATCHES Linux)
-  add_compile_definitions(LINUX)
+if(CMAKE_SYSTEM MATCHES Linux)
+  target_compile_definitions(socketClient PUBLIC LINUX)
 endif()

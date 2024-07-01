@@ -12,9 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall")
-
+  
 if(CMAKE_SYSTEM MATCHES Windows)
   message(STATUS "Target system is Windows")
   add_compile_definitions(WINDOWS)
@@ -56,15 +54,12 @@ add_subdirectory(lib/RenderingEngine)
 add_executable(client client.cpp)
 target_link_libraries(client PRIVATE engine socketClient)
 
+# mingw dll
 if(CMAKE_SYSTEM MATCHES Windows)
   target_link_options(client PRIVATE -static -static-libgcc -static-libstdc++)
-  add_compile_definitions(WINDOWS)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  add_definitions(-DDEBUG)
-endif()
-
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  add_definitions(-DNDEBUG)
-endif()
+target_compile_options(client PRIVATE 
+  $<$<CONFIG:Debug>:-g>
+  $<$<CONFIG:Debug>:-Wall>
+)

@@ -10,7 +10,9 @@
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <set>
+#include <array>
 
 using namespace vk_engine;
 namespace fs = std::filesystem;
@@ -421,7 +423,7 @@ VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& avai
 }
 
 VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window) {
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+    if (capabilities.currentExtent.width != (std::numeric_limits<uint32_t>::max)()) {
         return capabilities.currentExtent;
     }
 

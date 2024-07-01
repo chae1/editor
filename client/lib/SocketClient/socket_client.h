@@ -4,13 +4,10 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-// #pragma comment(lib, "ws2_32.lib")
-#define _WINNT_WIN32 0x0601
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
 #elif defined(LINUX)
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>

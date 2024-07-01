@@ -30,21 +30,26 @@ using namespace font;
 using namespace socket_client;
 
 namespace vk_engine {
-
-#ifdef NDEBUG
+    
+#if defined(NDEBUG)
     const bool enableValidationLayers = false;
-#else
+    
+    const std::vector<const char*> validationLayers = {
+    };
+
+#elif defined(DEBUG)
     const bool enableValidationLayers = true;
-#endif
 
     const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
     };
 
+#endif
+
     const std::vector<const char*> deviceExtensions = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
-
+    
     const int MAX_FRAMES_IN_FLIGHT = 2;
 
     struct QueueFamilyIndices {

@@ -35,3 +35,11 @@ add_custom_target(compileShaders
   ${CMAKE_CURRENT_BINARY_DIR}/frag.spv)
 
 add_dependencies(engine compileShaders)
+
+target_compile_definitions(
+  engine PUBLIC "$<$<CONFIG:Debug>:DEBUG>"
+)
+
+target_compile_definitions(
+  engine PUBLIC "$<$<CONFIG:Release>:NDEBUG>"
+)
