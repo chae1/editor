@@ -3,7 +3,7 @@ A GPU rendering text editor client and a server for simultaneous text editing.\
 <img src="https://github.com/chae1/editor/assets/29856486/381a0c16-9729-460f-9a82-04df2de4760d" width="350">
 
 ## How to run
-You can run prebuilt server and client programs are placed in editor/server/ and editor/client/build/. Or you can build yourself then run them. Your gpu should support vulkan to run the client program.
+Clone this project, then you can run the prebuilt server and client programs placed in editor/server/ and editor/client/build/. You can also build yourself then run them if you want. Your gpu should support vulkan to run the client program.
 ### Windows
 Following commands are for cmd. Use equivalent commands if you use other shells.
 #### Client
