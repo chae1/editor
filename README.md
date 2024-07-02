@@ -3,6 +3,7 @@ A GPU rendering text editor client and a server for simultaneous text editing.\
 <img src="https://github.com/chae1/editor/assets/29856486/381a0c16-9729-460f-9a82-04df2de4760d" width="350">
 
 ## How to run
+Server programs are placed in editor/server/. Client programs are placed in editor/client/build/. 
 ### Windows
 Following commands are for cmd. Use equivalent commands if you use other shells.
 #### Client
