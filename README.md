@@ -26,10 +26,10 @@ server.exe 127.0.0.1:100
 
 ## How to build
 ### Prerequisite
-1. Install vulkan sdk https://vulkan.lunarg.com/sdk/home.
-2. Install sbcl https://www.sbcl.org/platform-table.html.
-3. Install quicklisp https://www.quicklisp.org/beta/.
-4. Install cmake.
+1. Install cmake.
+2. Install vulkan sdk https://vulkan.lunarg.com/sdk/home.
+3. Install sbcl https://www.sbcl.org/platform-table.html.
+4. Install quicklisp https://www.quicklisp.org/beta/.
 
 ### Windows
 Following commands are for cmd. Use equivalent commands if you use other shells.
