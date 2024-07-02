@@ -36,7 +36,7 @@ Following commands are for cmd. Use equivalent commands if you use other shells.
 #### Client
 1. Install ucrt mingw toolchain in msys2 following https://code.visualstudio.com/docs/cpp/config-mingw.
 2. Move to client/build/ in cmd.
-3. 
+3. Build.
 ```console
 cmake .. -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE="Release"
 ```
@@ -44,7 +44,7 @@ or
 ```console
 cmake .. -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE="Debug"
 ```
-4.
+then,
 ```console
 cmake --build . -j %NUMBER_OF_PROCESSORS%
 ```
@@ -57,8 +57,8 @@ sbcl --load load.lisp
 2. server.exe will be built in server/.
 ### Ubuntu
 #### Client
-1. move to client/build/ in terminal.
-2.
+1. Move to client/build/ in terminal.
+2. Build.
 ```console
 cmake .. -G"Unix Makefiles" -DCMAKE_BUILD_TYPE="Release"
 ```
@@ -66,7 +66,7 @@ or
 ```console
 cmake .. -G"Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug"
 ```
-3.
+then,
 ```console
 cmake --build . -j $(nproc)
 ```
