@@ -72,41 +72,42 @@
   (mapc (lambda (pair) (setf (gethash (car pair) table) (cdr pair)))
 	alist))
 
-(defparameter *normal-state-insert-key-table* (make-hash-table :test 'eq))
+(progn
+  (defparameter *normal-state-insert-key-table* (make-hash-table :test 'eq))
 
-(defparameter *numbers* '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
-(defparameter *small-chars* '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z))
+  (defparameter *numbers* '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
+  (defparameter *small-chars* '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z))
 
-(defparameter *normal-state-number-alist*
-  (let ((i 47))
-    (mapcar (lambda (c) (cons (incf i) c)) *numbers*)))
-(defparameter *normal-state-char-alist*
-  (let ((i 64))
-    (mapcar (lambda (c) (cons (incf i) c)) *small-chars*)))
-(defparameter *normal-state-other-insert-key-alist*
-  '((32 . #\ ) (39 . #\') (44 . #\,) (45 . #\-) (46 . #\.) (47 . #\/) (59 . #\;) (60 . #\=) (91 . #\[) (92 . #\\) (93 . #\]) (96 . #\`)))
+  (defparameter *normal-state-number-alist*
+    (let ((i 47))
+      (mapcar (lambda (c) (cons (incf i) c)) *numbers*)))
+  (defparameter *normal-state-char-alist*
+    (let ((i 64))
+      (mapcar (lambda (c) (cons (incf i) c)) *small-chars*)))
+  (defparameter *normal-state-other-insert-key-alist*
+    '((32 . #\ ) (39 . #\') (44 . #\,) (45 . #\-) (46 . #\.) (47 . #\/) (59 . #\;) (61 . #\=) (91 . #\[) (92 . #\\) (93 . #\]) (96 . #\`)))
 
-(map-alist-to-table *normal-state-number-alist* *normal-state-insert-key-table*)
-(map-alist-to-table *normal-state-char-alist* *normal-state-insert-key-table*)
-(map-alist-to-table *normal-state-other-insert-key-alist* *normal-state-insert-key-table*)
+  (map-alist-to-table *normal-state-number-alist* *normal-state-insert-key-table*)
+  (map-alist-to-table *normal-state-char-alist* *normal-state-insert-key-table*)
+  (map-alist-to-table *normal-state-other-insert-key-alist* *normal-state-insert-key-table*)
 
-(defparameter *extend-state-insert-key-table* (make-hash-table :test 'eq))
+  (defparameter *extend-state-insert-key-table* (make-hash-table :test 'eq))
 
-(defparameter *extended-numbers* '(#\) #\! #\@ #\# #\$ #\% #\^ #\& #\* #\())
-(defparameter *large-chars* '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z))
+  (defparameter *extended-numbers* '(#\) #\! #\@ #\# #\$ #\% #\^ #\& #\* #\())
+  (defparameter *large-chars* '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z))
 
-(defparameter *extend-state-number-alist*
-  (let ((i 47))
-    (mapcar (lambda (c) (cons (incf i) c)) *extended-numbers*)))
-(defparameter *extend-state-char-alist*
-  (let ((i 64))
-    (mapcar (lambda (c) (cons (incf i) c)) *large-chars*)))
-(defparameter *extend-state-other-insert-key-alist*
-  '((32 . #\ ) (39 . #\") (44 . #\<) (45 . #\_) (46 . #\>) (47 . #\?) (59 . #\:) (60 . #\+) (91 . #\{) (92 . #\|) (93 . #\}) (96 . #\~)))
+  (defparameter *extend-state-number-alist*
+    (let ((i 47))
+      (mapcar (lambda (c) (cons (incf i) c)) *extended-numbers*)))
+  (defparameter *extend-state-char-alist*
+    (let ((i 64))
+      (mapcar (lambda (c) (cons (incf i) c)) *large-chars*)))
+  (defparameter *extend-state-other-insert-key-alist*
+    '((32 . #\ ) (39 . #\") (44 . #\<) (45 . #\_) (46 . #\>) (47 . #\?) (59 . #\:) (61 . #\+) (91 . #\{) (92 . #\|) (93 . #\}) (96 . #\~)))
 
-(map-alist-to-table *extend-state-number-alist* *extend-state-insert-key-table*)
-(map-alist-to-table *extend-state-char-alist* *extend-state-insert-key-table*)
-(map-alist-to-table *extend-state-other-insert-key-alist* *extend-state-insert-key-table*)
+  (map-alist-to-table *extend-state-number-alist* *extend-state-insert-key-table*)
+  (map-alist-to-table *extend-state-char-alist* *extend-state-insert-key-table*)
+  (map-alist-to-table *extend-state-other-insert-key-alist* *extend-state-insert-key-table*))
 
 (defmacro run-thread (&body body)
   `(sb-thread:make-thread
@@ -122,7 +123,6 @@
 
 (defparameter *curr-key-combi* (make-array 0 :fill-pointer t :adjustable t))
 (defparameter *curr-key-combi-fn-table* (make-hash-table :test #'equalp))
-
 
 
 
@@ -236,32 +236,33 @@
 
 (with-objs (text!)
   (defun handle-connect (connect socket-stream-in)
-    (objlet* ((user! (make-user! :connect connect :socket-stream-in socket-stream-in)))
-      (unwind-protect
-	   (handler-case
-	       (loop
-		(let ((init-msg (read-line socket-stream-in)))
-		  (handle-msg init-msg)))
-	     (end-of-file (o)
-	       (format t "~a~%" o)
-	       )
-	     (sb-int:simple-stream-error (o)
-	       (format t "~a~%" o)
-	       ))
-	(progn
-	  ;; (format t "~%")
-	  (format t "(handle-connect) ~a exiting~%" username)
-	  (format t "(handle-connect) closing connect ~a~%" connect)
-	  (sb-bsd-sockets:socket-close connect)
-	  (format t "(handle-connect) unlinking user and text~%")
-	  (unlink-user)
-	  (format t "(handle-connect) exiting handle-connect thread for ~a~%" connect))))))
+    (sb-thread:make-thread
+     (objlambda (text!)
+       (objlet* ((user! (make-user! :connect connect :socket-stream-in socket-stream-in)))
+	 (unwind-protect
+	      (handler-case
+		  (loop
+		    (let ((init-msg (read-line socket-stream-in)))
+		      (handle-msg init-msg)))
+		(end-of-file (o) (format t "~a~%" o))
+		(sb-int:simple-stream-error (o) (format t "~a~%" o)))
+
+	   (progn
+	     ;; (format t "~%")
+	     (format t "(handle-connect) ~a exiting~%" username)
+	     (format t "(handle-connect) closing connect ~a~%" connect)
+	     (sb-bsd-sockets:socket-close connect)
+	     (format t "(handle-connect) unlinking user and text~%")
+	     (unlink-user)
+	     (format t "(handle-connect) exiting handle-connect thread for ~a~%" connect)))))
+     
+     :arguments text!)))
 
 (defparameter *socket* nil)
 (defparameter *text* nil)
 
 (export 'run-server)
-(defun run-server (&key (ip #(127 0 0 1)) (port 20741))
+(defun run-server (&key (ip #(127 0 0 1)) (port 100))
   (unwind-protect
        (handler-case
 	   (progn
@@ -273,27 +274,30 @@
 	     (sb-bsd-sockets:socket-listen *socket* 1)
 	     
 	     (format t "(run-server) start listening to ~a~%" *socket*)
-
+	     
 	     (setf *text* (create-text!))
 	     
 	     ;; wait for new connect
 	     (objlet* ((text! *text*))
+	       (if-let ((connect (sb-bsd-sockets:socket-accept *socket*)))
+		 (let ((socket-stream-in (sb-bsd-sockets:socket-make-stream connect :input t)))
+		   (format t "new connect~%")
+		   (handle-connect connect socket-stream-in)))
+	       
 	       (loop
 		 (if-let ((connect (sb-bsd-sockets:socket-accept *socket*)))
-		   (let ((socket-stream-in (sb-bsd-sockets:socket-make-stream connect :input t)))
-		     (format t "new connect~%")
-		     (handle-connect connect socket-stream-in))))))
-	 (sb-bsd-sockets:bad-file-descriptor-error (o)
-	   (format t "(run-server) ~a~%" o)
-	   )
-	 (sb-bsd-sockets:address-in-use-error (o)
-	   (format t "(run-server) ~a~%" o)
-	   ))
+		  (let ((socket-stream-in (sb-bsd-sockets:socket-make-stream connect :input t)))
+		    (format t "new connect~%")
+		    (handle-connect connect socket-stream-in))))))
+	 
+	 (sb-bsd-sockets:bad-file-descriptor-error (o) (format t "(run-server) ~a~%" o))
+	 (sb-bsd-sockets:address-in-use-error (o) (format t "(run-server) ~a~%" o))
+	 (error (o) (format t "(run-server) ~a~%" o)))
+
     (progn
       (format t "(run-server) closing socket~%")
       (sb-bsd-sockets:socket-close *socket*)
-      (format t "(run-server) exiting server thread~%")
-      )))
+      (format t "(run-server) exiting server thread~%"))))
 
 (defun close-socket ()
   (format t "(close-socket) closing socket~%")
