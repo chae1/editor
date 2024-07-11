@@ -40,13 +40,16 @@
   (defun read-line-from-socket ()
     (read-line socket-stream-in)))
 
+(defparameter *msg-handle-lock* (sb-thread:make-mutex :name "lock for sequential msg handling in server"))
+
 (with-objs (user!)
   (defobjmacro set-msg-handle (init-msg variables &body body)
     `(setf (gethash ,init-msg *msg-handle-table*)
 	   (lambda ()
-	     (let ,(mapcar (lambda (el) (list el `(read-line-from-socket)))
-		    variables)
-	       ,@body)))))
+	     (sb-thread:with-mutex (*msg-handle-lock*)
+	       (let ,(mapcar (lambda (el) (list el `(read-line-from-socket)))
+		      variables)
+		 ,@body))))))
 
 (with-objs (user! text!)
   (set-msg-handle "login" (username-in width-in height-in font-size-in)
@@ -127,7 +130,7 @@
 
 
 (with-objs (user!)
-  (set-msg-handle "key-event" (key action)    
+  (set-msg-handle "key-event" (key action)
     ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
     (let ((key (read-from-string key))
 	  (action (read-from-string action)))

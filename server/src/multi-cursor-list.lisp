@@ -129,7 +129,8 @@
                 ((= iter-curr-index curr-index)
                  (progn
                    (decf iter-curr-index)
-                   (setf iter-curr-node curr-prev-node)))))))l)
+                   (setf iter-curr-node curr-prev-node)))))))
+  l)
 
 (export 'move-cursor-to-prev)
 (defobjfun move-cursor-to-prev (multi-cursor-list! cursor!)
