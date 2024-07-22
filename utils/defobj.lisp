@@ -42,7 +42,8 @@
 	 (slot-names (mapcar #'(lambda (slot-form) (concatenate 'string conc-name (string (car slot-form)))) slot-forms)))
     (set-slot-names obj slot-names))
   `(progn
-     ;; (export (quote ,obj))
+     (export (quote ,obj))
+     (declaim (special ,obj))
      (defstruct (,obj (:conc-name ,(symbol-append obj '-))) ,@slot-forms)))
 
 (export 'get-bindings)

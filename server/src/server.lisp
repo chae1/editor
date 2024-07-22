@@ -72,21 +72,24 @@
 ;; key input
 
 (defun map-alist-to-table (alist table)
-  (mapc (lambda (pair) (setf (gethash (car pair) table) (cdr pair)))
-	alist))
+  (dolist (pair alist)
+    (let ((el-1 (car pair))
+	  (el-2 (cdr pair)))
+      (setf (gethash el-1 table) el-2))))
 
 (progn
   (defparameter *normal-state-insert-key-table* (make-hash-table :test 'eq))
 
   (defparameter *numbers* '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
+  (defparameter *number-keys* (let ((i 47))
+				(mapcar #'(lambda (n) (incf i)) *numbers*)))
+  (defparameter *normal-state-number-alist* (mapcar #'(lambda (el-1 el-2) (cons el-1 el-2)) *number-keys* *numbers*))
+  
   (defparameter *small-chars* '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z))
-
-  (defparameter *normal-state-number-alist*
-    (let ((i 47))
-      (mapcar (lambda (c) (cons (incf i) c)) *numbers*)))
-  (defparameter *normal-state-char-alist*
-    (let ((i 64))
-      (mapcar (lambda (c) (cons (incf i) c)) *small-chars*)))
+  (defparameter *small-char-keys* (let ((i 64))
+				    (mapcar #'(lambda (n) (incf i)) *small-chars*)))
+  (defparameter *normal-state-char-alist* (mapcar #'(lambda (el-1 el-2) (cons el-1 el-2)) *small-char-keys* *small-chars*))
+  
   (defparameter *normal-state-other-insert-key-alist*
     '((32 . #\ ) (39 . #\') (44 . #\,) (45 . #\-) (46 . #\.) (47 . #\/) (59 . #\;) (61 . #\=) (91 . #\[) (92 . #\\) (93 . #\]) (96 . #\`)))
 
@@ -110,24 +113,19 @@
 
   (map-alist-to-table *extend-state-number-alist* *extend-state-insert-key-table*)
   (map-alist-to-table *extend-state-char-alist* *extend-state-insert-key-table*)
-  (map-alist-to-table *extend-state-other-insert-key-alist* *extend-state-insert-key-table*))
+  (map-alist-to-table *extend-state-other-insert-key-alist* *extend-state-insert-key-table*)
+
+  (defparameter *char->key* (make-hash-table :test 'eq))
+  
+  )
+
+
+
 
 (defmacro run-thread (&body body)
   `(sb-thread:make-thread
     (lambda ()
       ,@body)))
-
-(defobj key-combi!
-  (shift nil :type boolean)
-  (control nil :type boolean)
-  (alt nil :type boolean)
-  (capslock nil :type boolean)
-  (key nil :type (or null integer)))
-
-(defparameter *curr-key-combi* (make-array 0 :fill-pointer t :adjustable t))
-(defparameter *curr-key-combi-fn-table* (make-hash-table :test #'equalp))
-
-
 
 (with-objs (user!)
   (set-msg-handle "key-event" (key action)
@@ -222,6 +220,115 @@
     ;; (print state)
     
     ))
+
+(defmacro with-return-val (binding-form &body body)
+  `(objlet* (,binding-form)
+     ,@body
+     ,(car binding-form)))
+
+(defobj fn-container!
+  (entry-table (make-hash-table :test #'equalp) :type hash-table)  
+  (curr-table nil :type (or null hash-table)))
+
+(defun create-fn-container! ()
+  (with-return-val (fn-container! (make-fn-container!))
+    (setf curr-table entry-table)))
+
+(with-objs (fn-container!)
+  (defobjmacro get-next-elem (key-combi!)
+    `(gethash ,key-combi! curr-table)))
+
+(with-objs (fn-container!)
+  (defobjfun set-next-elem (key-combi! elem)
+    (setf (gethash key-combi! curr-table) elem)))
+
+(with-objs (fn-container!)
+  (defun get-next-table (key-combi!)
+    (or (get-next-elem key-combi!)
+	(setf (get-next-elem key-combi!)
+	      (make-hash-table :test #'equalp)))))
+
+(with-objs (fn-container!)
+  (defobjfun advance-curr-table (key-combi!)
+    (setf curr-table (get-next-table key-combi!))))
+
+(defparameter *key-combi-chain-fn-container* (create-fn-container!))
+
+(defmacro case-str (token &body clauses)
+  `(cond
+     ,@(mapcar #'(lambda (clause)
+		  `(,(if (eq (car clause) 'otherwise)
+			 t
+			 `(string-equal ,token ,(car clause)))
+		    ,@(cdr clause))) clauses)))
+
+(ql:quickload "cl-ppcre")
+
+(defmacro do-token ((token regex str) &body body)
+  `(dolist (,token (cl-ppcre:split ,regex ,str))
+     ,@body))
+
+(defun create-key-combi! (key-combi-str)
+  (with-return-val (key-combi! (my-text:make-key-combi!))
+    (do-token (key-str "-" key-combi-str)
+      (case-str key-str
+	("control" (setf control t))
+	("shift" (setf shift t))
+	("alt" (setf alt t))
+	("capslock" (setf capslock t))
+	(otherwise (setf key (aref key-str 0)))))))
+
+(defmacro do-token-with-last-form ((token regex str) body-form last-form)
+  (let ((token-list (symbol-append 'token-list (gensym))))
+    `(do* ((,token-list (cl-ppcre:split ,regex ,str) (cdr ,token-list))
+	   (,token (car ,token-list) (car ,token-list)))
+	  ((eq (cdr ,token-list) nil)
+	   ,last-form)
+       ,body-form)))
+
+(with-objs (fn-container!)
+  (defun set-key-combi-fn (key-combi-chain-str fn)
+    (do-token-with-last-form
+	(key-combi-str "\\ " key-combi-chain-str)
+	;; body-form
+	(objlet* ((key-combi! (create-key-combi! key-combi-str)))
+	  (advance-curr-table key-combi!))
+	;; last-form
+	(objlet* ((key-combi! (create-key-combi! key-combi-str)))
+	  (set-next-elem key-combi! fn)))))
+
+(objlet* ((fn-container! *key-combi-chain-fn-container*))
+  (let ((fn #'(lambda ()
+		(format t "~a~%" #\a))))
+    (set-key-combi-fn "a" fn)))
+
+(defmacro setf-case (place case-form)
+  `(case ,(car case-form)
+     ,@(mapcar #'(lambda (clause)
+		  (form (car clause) `(setf ,place ,(cadr clause))))
+	(cdr case-form))))
+
+(with-objs (key-combi!)
+  (defun update-key-combi! (key-in action-in)
+    (case key-in
+      (340 (setf-case shift (action-in (0 nil) (1 t))))
+      (341 (setf-case control (action-in (0 nil) (1 t))))
+      (342 (setf-case alt (action-in (0 nil) (1 t))))
+      (280 (setf-case capslock (action-in (0 nil) (1 t))))
+      (otherwise (setf-case key (action-in (0 nil) (1 key-in)))))))
+
+(with-objs (user!)
+  (set-msg-handle "key-event" (key action)
+    ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
+    (let ((key-in (read-from-string key))
+	  (action-in (read-from-string action)))
+      (format t "key ~a, action ~a received.~%" key-in action-in)
+
+      (objlet* ((key-combi! curr-key-combi))
+	(update-key-combi! key-in action-in)
+	))))
+
+
 
 (with-objs (user!)
   (set-msg-handle "resize-window" (width-in height-in)

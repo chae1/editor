@@ -9,9 +9,6 @@
 
 (in-package :my-text)
 
-(export `(user! text! cursor! line! font! char! glyph! bounding-box!))
-(declaim (special user! text! cursor! line! font! char! glyph! boundin1g-box!))
-
 ;; font
 
 (defobj bounding-box!
@@ -261,6 +258,15 @@ cursor-list of user!
 (defun get-default-font ()
   *default-font*)
 
+(export 'key-combi!)
+(export 'make-key-combi!)
+(defobj key-combi!
+  (shift nil :type boolean)
+  (control nil :type boolean)
+  (alt nil :type boolean)
+  (capslock nil :type boolean)
+  (key nil :type (or null integer)))
+
 (export 'make-user!)
 (defobj user!
   (username nil)
@@ -297,7 +303,9 @@ cursor-list of user!
   (print-started nil :type boolean)
   
   (primary-cursor nil :type (or null cursor!))
-  (cursor-list nil :type (or null cons)))
+  (cursor-list nil :type (or null cons))
+
+  (curr-key-combi (make-key-combi!) :type key-combi!))
 
 (with-objs (user!)
   (defobjfun load-text (text! file-path-in)
