@@ -31,6 +31,12 @@
     (send-msg (get-render-msg))
     (send-msg (format-string "draw end~%"))))
 
+(with-objs (user!)
+  (defun broadcast-render-msg ()
+    (objlet* ((text! text))
+      (objdolist (user! user-list)
+	(send-render-msg)))))
+
 (defparameter *msg-handle-table* (make-hash-table :test 'equalp))
 
 (defun get-msg-handle (msg)
@@ -71,160 +77,55 @@
 
 ;; key input
 
-(defun map-alist-to-table (alist table)
+;; define key table
+
+(defparameter *key-table* (make-hash-table :test 'eq))
+
+(defun add-to-key-table (alist)
   (dolist (pair alist)
-    (let ((el-1 (car pair))
-	  (el-2 (cdr pair)))
-      (setf (gethash el-1 table) el-2))))
+    (let ((key (car pair))
+	  (char (cdr pair)))
+      (setf (gethash char *key-table*) key))))
 
-(progn
-  (defparameter *normal-state-insert-key-table* (make-hash-table :test 'eq))
+(defun add-to-key-table-2 (keys chars)
+  (mapc #'(lambda (key char)
+	    (setf (gethash char *key-table*) key))
+	keys chars))
 
-  (defparameter *numbers* '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
-  (defparameter *number-keys* (let ((i 47))
-				(mapcar #'(lambda (n) (incf i)) *numbers*)))
-  (defparameter *normal-state-number-alist* (mapcar #'(lambda (el-1 el-2) (cons el-1 el-2)) *number-keys* *numbers*))
-  
-  (defparameter *small-chars* '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z))
-  (defparameter *small-char-keys* (let ((i 64))
-				    (mapcar #'(lambda (n) (incf i)) *small-chars*)))
-  (defparameter *normal-state-char-alist* (mapcar #'(lambda (el-1 el-2) (cons el-1 el-2)) *small-char-keys* *small-chars*))
-  
-  (defparameter *normal-state-other-insert-key-alist*
-    '((32 . #\ ) (39 . #\') (44 . #\,) (45 . #\-) (46 . #\.) (47 . #\/) (59 . #\;) (61 . #\=) (91 . #\[) (92 . #\\) (93 . #\]) (96 . #\`)))
-
-  (map-alist-to-table *normal-state-number-alist* *normal-state-insert-key-table*)
-  (map-alist-to-table *normal-state-char-alist* *normal-state-insert-key-table*)
-  (map-alist-to-table *normal-state-other-insert-key-alist* *normal-state-insert-key-table*)
-
-  (defparameter *extend-state-insert-key-table* (make-hash-table :test 'eq))
-
-  (defparameter *extended-numbers* '(#\) #\! #\@ #\# #\$ #\% #\^ #\& #\* #\())
-  (defparameter *large-chars* '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z))
-
-  (defparameter *extend-state-number-alist*
-    (let ((i 47))
-      (mapcar (lambda (c) (cons (incf i) c)) *extended-numbers*)))
-  (defparameter *extend-state-char-alist*
-    (let ((i 64))
-      (mapcar (lambda (c) (cons (incf i) c)) *large-chars*)))
-  (defparameter *extend-state-other-insert-key-alist*
-    '((32 . #\ ) (39 . #\") (44 . #\<) (45 . #\_) (46 . #\>) (47 . #\?) (59 . #\:) (61 . #\+) (91 . #\{) (92 . #\|) (93 . #\}) (96 . #\~)))
-
-  (map-alist-to-table *extend-state-number-alist* *extend-state-insert-key-table*)
-  (map-alist-to-table *extend-state-char-alist* *extend-state-insert-key-table*)
-  (map-alist-to-table *extend-state-other-insert-key-alist* *extend-state-insert-key-table*)
-
-  (defparameter *char->key* (make-hash-table :test 'eq))
-  
-  )
+(defun get-key (char)
+  (gethash char *key-table*))
 
 
+(defparameter *num-keys* (iota 10 :start 48))
+(defparameter *normal-nums* '(#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9))
+(defparameter *extended-nums* '(#\) #\! #\@ #\# #\$ #\% #\^ #\& #\* #\())
 
+(add-to-key-table-2 *num-keys* *normal-nums*)
+(add-to-key-table-2 *num-keys* *extended-nums*)
 
-(defmacro run-thread (&body body)
-  `(sb-thread:make-thread
-    (lambda ()
-      ,@body)))
+(defparameter *char-keys* (iota 26 :start 65))
+(defparameter *normal-chars* '(#\a #\b #\c #\d #\e #\f #\g #\h #\i #\j #\k #\l #\m #\n #\o #\p #\q #\r #\s #\t #\u #\v #\w #\x #\y #\z))
+(defparameter *extended-chars* '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X #\Y #\Z))
 
-(with-objs (user!)
-  (set-msg-handle "key-event" (key action)
-    ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
-    (let ((key (read-from-string key))
-	  (action (read-from-string action)))
-      (format t "key ~a, action ~a received.~%" key action)
-      
-      ;; 0: release, 1: push
-      (case key
-	;; shift
-	(340 (case action
-	       ((0 1) (case state
-			('normal (setf state 'extend))
-			('extend (setf state 'normal))))))
+(add-to-key-table-2 *char-keys* *normal-chars*)
+(add-to-key-table-2 *char-keys* *extended-chars*)
 
-	;; control
-	(341 (case action
-	       (0 (setf state 'normal))
-	       (1 (setf state 'control))))
+(defparameter *other-normal-chars-alist* '((32 . #\ ) (39 . #\') (44 . #\,) (45 . #\-) (46 . #\.) (47 . #\/) (59 . #\;) (61 . #\=) (91 . #\[) (92 . #\\) (93 . #\]) (96 . #\`)))
+(defparameter *other-extended-chars-alist* '((32 . #\ ) (39 . #\") (44 . #\<) (45 . #\_) (46 . #\>) (47 . #\?) (59 . #\:) (61 . #\+) (91 . #\{) (92 . #\|) (93 . #\}) (96 . #\~)))
 
-	;; capslock
-	(280 (case action
-	       (1 (case state
-		    ('normal (setf state 'extend))
-		    ('extend (setf state 'normal))))))
+(add-to-key-table *other-normal-chars-alist*)
+(add-to-key-table *other-extended-chars-alist*)
 
-	;; enter
-	(257 (case action
-	       (1 (insert-new-line-after-cursors))))
+(defparameter *other-normal-chars* (mapcar #'(lambda (pair) (cdr pair)) *other-normal-chars-alist*))
+(defparameter *other-extended-chars* (mapcar #'(lambda (pair) (cdr pair)) *other-extended-chars-alist*))
 
-	;; backspace
-	(259 (case action
-	       (1 (delete-char-at-cursors))))
-
-	;; tab
-	(258 (case action
-	       (1 )))
-
-	;; right
-	(262 (case action
-	       (1 (move-cursors-right))))
-
-	;; left
-	(263 (case action
-	       (1 (move-cursors-left))))
-
-	;; up
-	(265 (case action
-	       (1 (move-cursors-up))))
-
-	;; down
-	(264 (case action
-	       (1 (move-cursors-down))))
-
-	;; otherwise insert character in text
-	(otherwise (case action
-		     (1 (case state
-			  ('normal (if-let ((char (gethash key *normal-state-insert-key-table*)))
-				     (flet ((insert-char ()
-					      (format t "insert char ~a~%" char)
-					      (insert-char-after-cursors char)))
-				       (insert-char)
-				       ;; (sb-thread:make-thread
-				       ;; 	(objlambda (user!)
-				       ;; 	  (handler-case
-				       ;; 	      (progn
-				       ;; 		(insert-char)
-				       ;; 		(sleep 0.5))
-				       ;; 	    (insert-char-stop (o)))
-				       ;; 	  )
-					
-				       ;; 	:arguments user!)
-				       )))
-			  
-			  ('extend (if-let ((char (gethash key *extend-state-insert-key-table*)))
-				     (progn
-				       (format t "insert char ~a~%" char)
-				       (insert-char-after-cursors char)))))
-		      ))))
-
-      ;; send render message
-      (case action
-	(1 (objlet* ((text! text))
-	     (objdolist (user! user-list)
-	       (send-render-msg))
-	     ;; (format t "~a~%" line-tree)
-	     ;; (format t "------------------------------------------------~%")
-	     ))))
-    
-    ;; (print cursor-list)
-    ;; (print state)
-    
-    ))
 
 (defmacro with-return-val (binding-form &body body)
   `(objlet* (,binding-form)
      ,@body
      ,(car binding-form)))
+
+;; fn-container! definition
 
 (defobj fn-container!
   (entry-table (make-hash-table :test #'equalp) :type hash-table)  
@@ -240,10 +141,10 @@
 
 (with-objs (fn-container!)
   (defobjfun set-next-elem (key-combi! elem)
-    (setf (gethash key-combi! curr-table) elem)))
+    (setf (get-next-elem key-combi!) elem)))
 
 (with-objs (fn-container!)
-  (defun get-next-table (key-combi!)
+  (defobjfun get-next-table (key-combi!)
     (or (get-next-elem key-combi!)
 	(setf (get-next-elem key-combi!)
 	      (make-hash-table :test #'equalp)))))
@@ -252,7 +153,16 @@
   (defobjfun advance-curr-table (key-combi!)
     (setf curr-table (get-next-table key-combi!))))
 
+;; create fn-container!
+
 (defparameter *key-combi-chain-fn-container* (create-fn-container!))
+
+(objlet* ((fn-container! *key-combi-chain-fn-container*))
+  (maphash #'(lambda (k v)
+	       (format t "~a~%~a~%~%" k v))
+	   entry-table))
+
+;; define set-key-combi-fn
 
 (defmacro case-str (token &body clauses)
   `(cond
@@ -261,8 +171,6 @@
 			 t
 			 `(string-equal ,token ,(car clause)))
 		    ,@(cdr clause))) clauses)))
-
-(ql:quickload "cl-ppcre")
 
 (defmacro do-token ((token regex str) &body body)
   `(dolist (,token (cl-ppcre:split ,regex ,str))
@@ -276,31 +184,68 @@
 	("shift" (setf shift t))
 	("alt" (setf alt t))
 	("capslock" (setf capslock t))
-	(otherwise (setf key (aref key-str 0)))))))
+	(otherwise (setf key (read-from-string key-str)))))))
 
-(defmacro do-token-with-last-form ((token regex str) body-form last-form)
+(defmacro do-token-with-last-form ((token regex str) main-form last-form)
   (let ((token-list (symbol-append 'token-list (gensym))))
     `(do* ((,token-list (cl-ppcre:split ,regex ,str) (cdr ,token-list))
 	   (,token (car ,token-list) (car ,token-list)))
 	  ((eq (cdr ,token-list) nil)
 	   ,last-form)
-       ,body-form)))
+       ,main-form)))
 
 (with-objs (fn-container!)
   (defun set-key-combi-fn (key-combi-chain-str fn)
     (do-token-with-last-form
 	(key-combi-str "\\ " key-combi-chain-str)
-	;; body-form
+	;; main-form
 	(objlet* ((key-combi! (create-key-combi! key-combi-str)))
 	  (advance-curr-table key-combi!))
 	;; last-form
 	(objlet* ((key-combi! (create-key-combi! key-combi-str)))
-	  (set-next-elem key-combi! fn)))))
+	  (set-next-elem key-combi! fn)
+	  (setf curr-table entry-table)))))
 
-(objlet* ((fn-container! *key-combi-chain-fn-container*))
-  (let ((fn #'(lambda ()
-		(format t "~a~%" #\a))))
-    (set-key-combi-fn "a" fn)))
+;; set key combi chain functions
+
+(defun set-key-combi-fns (fn key-str &rest attach-strs)
+  (objlet* ((fn-container! *key-combi-chain-fn-container*))
+    (dolist (attach-str attach-strs)
+      (set-key-combi-fn (concatenate 'string attach-str key-str) fn))))
+
+(defmacro set-insert-key-fns (chars &rest attach-strs)
+  `(dolist (char ,chars)
+     (set-key-combi-fns
+      #'(lambda ()
+	  (insert-char-after-cursors char)
+	  (broadcast-render-msg))
+      (write-to-string (get-key char)) ,@attach-strs)))
+
+(progn
+  (set-insert-key-fns *normal-chars* "" "shift-capslock-") ;; normal characters
+  (set-insert-key-fns *extended-chars* "shift-" "capslock-") ;; extended characters
+  (set-insert-key-fns *normal-nums* "" "capslock-") ;; normal numbers
+  (set-insert-key-fns *extended-nums* "shift-" "shift-capslock-") ;; extended numbers
+  (set-insert-key-fns *other-normal-chars* "" "capslock-") ;; other normal characters
+  (set-insert-key-fns *other-extended-chars* "shift-" "shift-capslock-") ;; other extended characters
+  )
+
+(defmacro set-single-key-fns (fn key-str &rest attach-strs)
+  `(set-key-combi-fns #'(lambda ()
+			  (funcall ,fn)
+			  (broadcast-render-msg))
+		      ,key-str ,@attach-strs))
+
+(progn
+  (set-single-key-fns #'insert-new-line-after-cursors "257" "" "capslock-") ;; enter
+  (set-single-key-fns #'delete-char-at-cursors "259" "" "capslock-") ;; backspace
+  (set-single-key-fns #'move-cursors-right "262" "" "capslock-") ;; right
+  (set-single-key-fns #'move-cursors-left "263" "" "capslock-")  ;; left
+  (set-single-key-fns #'move-cursors-down "264" "" "capslock-") ;; down
+  (set-single-key-fns #'move-cursors-up "265" "" "capslock-") ;; up
+  )
+
+;; define update-key-combi!
 
 (defmacro setf-case (place case-form)
   `(case ,(car case-form)
@@ -308,25 +253,45 @@
 		  (form (car clause) `(setf ,place ,(cadr clause))))
 	(cdr case-form))))
 
-(with-objs (key-combi!)
-  (defun update-key-combi! (key-in action-in)
-    (case key-in
-      (340 (setf-case shift (action-in (0 nil) (1 t))))
-      (341 (setf-case control (action-in (0 nil) (1 t))))
-      (342 (setf-case alt (action-in (0 nil) (1 t))))
-      (280 (setf-case capslock (action-in (0 nil) (1 t))))
-      (otherwise (setf-case key (action-in (0 nil) (1 key-in)))))))
+(with-objs (user!)
+  (defun update-key-combi! (key-in action)
+    (objlet* ((key-combi! curr-key-combi))
+      (case key-in
+	(340 (setf-case shift (action (0 nil) (1 t))))
+	(341 (setf-case control (action (0 nil) (1 t))))
+	(342 (setf-case alt (action (0 nil) (1 t))))
+	(280 (setf-case capslock (action (1 (not capslock)))))
+	(otherwise (setf-case key (action (0 nil) (1 key-in))))))))
+
+;; set key-event handle
 
 (with-objs (user!)
   (set-msg-handle "key-event" (key action)
-    ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
-    (let ((key-in (read-from-string key))
-	  (action-in (read-from-string action)))
-      (format t "key ~a, action ~a received.~%" key-in action-in)
-
-      (objlet* ((key-combi! curr-key-combi))
-	(update-key-combi! key-in action-in)
-	))))
+    (objlet* ((fn-container! *key-combi-chain-fn-container*))
+      ;; (send-msg connect (with-output-to-string (stream) (format stream "key ~a action ~a received.~%" key action)))
+      (let ((key (read-from-string key))
+	    (action (read-from-string action)))
+	(format t "key ~a, action ~a received.~%" key action)
+	(update-key-combi! key action)
+	
+	(when (eq action 1)
+	  (format t "~a~%" curr-key-combi)
+	  (let ((next-elem (get-next-elem curr-key-combi)))
+	    (cond ((hash-table-p next-elem)
+		   ;; table
+		   (setf curr-table next-elem))
+		  ((functionp next-elem)
+		   ;; function
+		   (funcall next-elem)
+		   (setf curr-table entry-table))
+		  (t
+		   ;; otherwise
+		   (setf curr-table entry-table))))
+	  
+	  )
+	
+	)))
+    )
 
 
 
@@ -406,7 +371,7 @@
 
     (progn
       (format t "(run-server) closing socket~%")
-      (sb-bsd-sockets:socket-close *socket*)
+      (close-socket)
       (format t "(run-server) exiting server thread~%"))))
 
 (defun close-socket ()

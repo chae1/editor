@@ -31,7 +31,7 @@ void main() {
     StorageBufferObject ssbo = ssbos[gl_InstanceIndex];
     
     // gl_Position = ubo.proj * ubo.view * ubo.model * ssbo.model * inPos;
-    gl_Position = ssbo.model * inPos;
+    gl_Position = ubo.proj * ubo.view * ubo.model * ssbo.model * inPos;
     // gl_Position = inPos;
 
     charColor = ssbo.color;
