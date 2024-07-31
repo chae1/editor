@@ -30,7 +30,11 @@ server.exe 127.0.0.1:100
 2. Install vulkan sdk https://vulkan.lunarg.com/sdk/home.
 3. Install sbcl https://www.sbcl.org/platform-table.html.
 4. Install quicklisp https://www.quicklisp.org/beta/.
+5. Install glfw dependencies.
+```
+sudo apt install libwayland-dev libxkbcommon-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 
+```
 ### Windows
 Following commands are for cmd. Use equivalent commands if you use other shells.
 #### Client
