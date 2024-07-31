@@ -279,7 +279,7 @@ cursor-list of user!
   ;; char variables
   (curr-font (get-default-font) :type font!)
   ;; normalized scale to pixel scale
-  (curr-font-size 10.0 :type single-float)
+  (curr-font-size 30.0 :type single-float)
 
   ;; pixel scale
   (curr-x-line-gap 0.05 :type single-float)
@@ -650,7 +650,7 @@ cursor-list of user!
             (advance-space))
 	  (progn
 	    (increase-word-width)))
-
+      
       (if (my-list:is-cursor-last char-list word-end-cursor)
 	  (progn
 	    (advance-word)
@@ -841,6 +841,7 @@ cursor-list of user!
   (defun insert-char-after-cursor (char)
     (objlet* ((line! (my-tree:get-data text-cursor))
 	      (char! (create-char! char)))
+      (print char!)
       (my-list:insert-data-after-cursor char-list line-cursor char!)
       (setf default-pos-in-line (my-list:index-of line-cursor)))))
 

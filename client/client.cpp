@@ -22,7 +22,7 @@ void socket_listener();
 
 int width = 500;
 int height = 400;
-int font_size = 20;
+int font_size = 50;
 
 Engine engine { width, height, "editor", key_callback, framebufferResizeCallback, mouseButtonCallback, recreateSwapChainCallback, socket_listener };
 
