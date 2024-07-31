@@ -17,11 +17,11 @@ server.exe 127.0.0.1:100
 ### Ubuntu
 #### Client
 ```
-./client 127.0.0.1:100 YourName
+./client 127.0.0.1:20741 YourName
 ```
 #### Server
 ```
-./server 127.0.0.1:100
+./server 127.0.0.1:20741
 ```
 
 ## How to build
